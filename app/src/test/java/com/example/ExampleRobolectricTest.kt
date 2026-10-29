@@ -1,0 +1,99 @@
+package com.example
+
+import android.content.Context
+import androidx.test.core.app.ApplicationProvider
+import com.example.data.local.MealPlanDatabase
+import com.example.data.model.FoodItemModel
+import com.example.data.model.MealType
+import com.example.data.model.QuantityUnit
+import com.example.data.remote.OpenFoodFactsApi
+import com.example.data.repository.MealPlanRepository
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+import java.util.UUID
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [36])
+class ExampleRobolectricTest {
+
+    @Test
+    fun `read string from context`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val appName = context.getString(R.string.app_name)
+        assertEquals("MealPlan", appName)
+    }
+
+    @Test
+    fun `saveFullPlan preserves day meals and does not wipe selected day`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val api = OpenFoodFactsApi.create()
+        val repository = MealPlanRepository(db, api, context)
+
+        // Inizializza i dati dimostrativi (contiene alimenti per tutti i 7 giorni)
+        repository.initializeDefaultDataIfNeeded()
+
+        val activePlan = repository.getActivePlanSync()
+        assertNotNull(activePlan)
+        val planId = activePlan!!.id
+
+        // 1. Simula visualizzazione di Mercoledì (giorno 3) nella schermata Lista Pasti
+        val wednesdayMealsBefore = repository.getMealsWithItemsForDay(planId, 3)
+        val wednesdayTotalFoodsBefore = wednesdayMealsBefore.sumOf { it.items.size }
+        assertTrue("Mercoledì deve avere alimenti all'inizio", wednesdayTotalFoodsBefore > 0)
+
+        // 2. Simula apertura dell'editor: carica tutti i 7 giorni
+        val allDaysMeals = repository.getPlanWithAllDaysMeals(planId).toMutableMap()
+        assertTrue("Tutti i 7 giorni devono essere presenti nell'editor", allDaysMeals.size == 7)
+
+        // 3. Simula modifica a un giorno diverso (es. Martedì, giorno 2): aggiunta di un nuovo alimento a Pranzo
+        val tuesdayMeals = allDaysMeals[2]!!.toMutableList()
+        val lunchIdx = tuesdayMeals.indexOfFirst { it.mealType == MealType.LUNCH }
+        assertTrue(lunchIdx != -1)
+        val targetLunch = tuesdayMeals[lunchIdx]
+        val newItem = FoodItemModel(
+            id = UUID.randomUUID().toString(),
+            mealId = targetLunch.mealId,
+            name = "Risotto ai Funghi Porcini Test",
+            brand = "Riso Scotti",
+            quantity = 100.0,
+            unit = QuantityUnit.GRAMS,
+            calories = 340.0
+        )
+        tuesdayMeals[lunchIdx] = targetLunch.copy(items = targetLunch.items + newItem)
+        allDaysMeals[2] = tuesdayMeals
+
+        // 4. Salva il piano dall'editor
+        repository.saveFullPlan(
+            planId = planId,
+            title = activePlan.title,
+            notes = activePlan.notes,
+            setAsActive = true,
+            daysMeals = allDaysMeals
+        )
+
+        // 5. Verifica che Mercoledì (giorno 3) NON sia stato svuotato!
+        val wednesdayMealsAfter = repository.getMealsWithItemsForDay(planId, 3)
+        val wednesdayTotalFoodsAfter = wednesdayMealsAfter.sumOf { it.items.size }
+        assertEquals(
+            "La configurazione di Mercoledì non deve essere persa al salvataggio dell'editor!",
+            wednesdayTotalFoodsBefore,
+            wednesdayTotalFoodsAfter
+        )
+
+        // 6. Verifica che Martedì (giorno 2) contenga l'alimento aggiunto
+        val tuesdayMealsAfter = repository.getMealsWithItemsForDay(planId, 2)
+        val lunchAfter = tuesdayMealsAfter.first { it.mealType == MealType.LUNCH }
+        assertTrue(
+            "L'alimento aggiunto deve essere presente nel pranzo di Martedì",
+            lunchAfter.items.any { it.name == "Risotto ai Funghi Porcini Test" }
+        )
+    }
+}

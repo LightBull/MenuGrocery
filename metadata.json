@@ -1,0 +1,6 @@
+{
+  "name": "MealPlan",
+  "description": "Pianificazione pasti settimanali, lista della spesa intelligente e promemoria di scongelamento.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
