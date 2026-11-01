@@ -1,6 +1,6 @@
 {
-  "summary":  "Piano per la creazione di una pagina Privacy Policy HTML moderna, responsive e bilingue (italiano e inglese) posizionata in docs/index.html per GitHub Pages. Copre la conformità alle norme di Google Play Console: archiviazione locale su dispositivo (Room), permessi (INTERNET per ricerca nutrizionale OpenFoodFacts/USDA e POST_NOTIFICATIONS per promemoria scongelamento locali), assenza di tracciamento pubblicitario o profilazione, e contatti privacy (devsmapo@gmail.com).",
-  "updatedAt":  "2026-11-01T11:08:09.742076053Z",
+  "summary":  "Piano per la redazione delle note di rilascio della versione 5.0 per Google Play Console in formato bilingue (italiano e inglese), ottimizzate per rimanere rigorosamente entro il limite massimo di 500 caratteri ciascuna. Evidenziano la persistenza a database della lista spesa, il nuovo layout compatto con giorni affiancati alle quantità, la risoluzione delle notifiche di scongelamento e il pannello di diagnostica.",
+  "updatedAt":  "2026-11-01T13:25:25.971821809Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
