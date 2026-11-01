@@ -238,13 +238,13 @@ class MealPlanRepository(
         data class AggregationKey(val normalizedName: String, val unit: QuantityUnit)
 
         val existingItems = shoppingListDao.getAllItemsSync()
-        val existingPantryMap = existingItems.associate { 
-            AggregationKey(it.name.trim().lowercase(), it.unit) to it.pantryQuantity 
+        val existingPlanItemsMap = existingItems.filter { !it.isManualExtra }.associateBy { 
+            AggregationKey(it.name.trim().lowercase(), it.unit) 
         }
 
-        // Mantieni eventuali extra manuali e ripristinali come "da prendere"
+        // Mantieni eventuali extra manuali preservando il loro stato (incluso isPurchased)
         val existingExtras = if (preserveManualExtras) {
-            existingItems.filter { it.isManualExtra }.map { it.copy(isPurchased = false) }
+            existingItems.filter { it.isManualExtra }
         } else {
             emptyList()
         }
@@ -285,7 +285,8 @@ class MealPlanRepository(
         }
 
         val generatedItems = aggregatedMap.map { (key, value) ->
-            val pantryQty = existingPantryMap[key] ?: 0.0
+            val existingItem = existingPlanItemsMap[key]
+            val pantryQty = existingItem?.pantryQuantity ?: 0.0
             val actualQty = (value.totalQuantity - pantryQty).coerceAtLeast(0.0)
             val itemDaysStr = if (value.days.isNotEmpty()) {
                 value.days.sorted().joinToString(", ") { DayOfWeekInfo.fromIndex(it).shortName }
@@ -293,14 +294,14 @@ class MealPlanRepository(
                 dayNames
             }
             ShoppingListItemEntity(
-                id = UUID.randomUUID().toString(),
+                id = existingItem?.id ?: UUID.randomUUID().toString(),
                 planId = activePlan.id,
                 name = value.displayName,
                 quantity = if (pantryQty > 0) actualQty else value.totalQuantity,
                 originalQuantity = value.totalQuantity,
                 pantryQuantity = pantryQty,
                 unit = key.unit,
-                isPurchased = false,
+                isPurchased = existingItem?.isPurchased ?: false,
                 isManualExtra = false,
                 sourceDays = itemDaysStr,
                 category = value.category
@@ -319,7 +320,7 @@ class MealPlanRepository(
         val items = shoppingListDao.getAllItemsSync()
         items.forEach { item ->
             if (item.isPurchased) {
-                shoppingListDao.updateItem(item.copy(isPurchased = false))
+                shoppingListDao.updatePurchasedStatus(item.id, false)
             }
         }
     }
@@ -340,7 +341,12 @@ class MealPlanRepository(
     }
 
     suspend fun toggleItemPurchased(item: ShoppingListItemEntity) = withContext(Dispatchers.IO) {
-        shoppingListDao.updateItem(item.copy(isPurchased = !item.isPurchased))
+        val newStatus = !item.isPurchased
+        shoppingListDao.updatePurchasedStatus(item.id, newStatus)
+    }
+
+    suspend fun setItemPurchased(id: String, isPurchased: Boolean) = withContext(Dispatchers.IO) {
+        shoppingListDao.updatePurchasedStatus(id, isPurchased)
     }
 
     suspend fun addManualExtra(name: String, quantity: Double, unit: QuantityUnit) = withContext(Dispatchers.IO) {

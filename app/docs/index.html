@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - MealPlan</title>
+    <meta name="description" content="Informativa sulla Privacy per l'applicazione Android MealPlan conforme ai requisiti di Google Play Console e GDPR.">
+    <style>
+        :root {
+            --primary: #4A6B36;
+            --primary-dark: #375227;
+            --primary-light: #EBF2E5;
+            --secondary: #D97742;
+            --text-main: #212529;
+            --text-muted: #6C757D;
+            --bg-page: #F8FAF6;
+            --bg-card: #FFFFFF;
+            --border: #E2E8DE;
+            --badge-bg: #E3EDE0;
+            --badge-color: #2F4F1E;
+            --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            --radius: 12px;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --primary: #8AB873;
+                --primary-dark: #A5D28F;
+                --primary-light: #202D1B;
+                --secondary: #EAA074;
+                --text-main: #E9ECEF;
+                --text-muted: #ADB5BD;
+                --bg-page: #121611;
+                --bg-card: #1B211A;
+                --border: #2C3529;
+                --badge-bg: #273822;
+                --badge-color: #C1E4AF;
+                --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-page);
+            color: var(--text-main);
+            line-height: 1.65;
+            padding: 0 1rem;
+        }
+
+        header {
+            max-width: 900px;
+            margin: 2rem auto 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .brand-icon {
+            width: 44px;
+            height: 44px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #FFFFFF;
+            font-size: 22px;
+            box-shadow: 0 2px 8px rgba(74, 107, 54, 0.3);
+        }
+
+        .brand-text h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-main);
+            line-height: 1.2;
+        }
+
+        .brand-text p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .lang-switch {
+            display: flex;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 30px;
+            padding: 3px;
+            gap: 2px;
+        }
+
+        .lang-btn {
+            background: transparent;
+            border: none;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+            transition: all 0.2s ease;
+        }
+
+        .lang-btn.active {
+            background: var(--primary);
+            color: #FFFFFF;
+        }
+
+        main {
+            max-width: 900px;
+            margin: 0 auto 3rem;
+        }
+
+        .hero-banner {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow);
+        }
+
+        .hero-banner h2 {
+            font-size: 1.35rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary);
+        }
+
+        .meta-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 1.25rem;
+        }
+
+        .badge-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+
+        .badge-item {
+            background: var(--badge-bg);
+            color: var(--badge-color);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .toc {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.25rem 1.75rem;
+            margin-bottom: 2rem;
+        }
+
+        .toc h3 {
+            font-size: 1rem;
+            margin-bottom: 0.75rem;
+            color: var(--text-main);
+        }
+
+        .toc ul {
+            list-style: none;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 0.5rem;
+        }
+
+        .toc a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .toc a:hover {
+            text-decoration: underline;
+        }
+
+        .section-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--shadow);
+        }
+
+        .section-card h3 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .section-card p {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            color: var(--text-main);
+        }
+
+        .section-card ul {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+        }
+
+        .section-card li {
+            margin-bottom: 0.5rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            margin: 1.25rem 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+            background: var(--bg-card);
+        }
+
+        th, td {
+            padding: 0.75rem 1rem;
+            border: 1px solid var(--border);
+            text-align: left;
+        }
+
+        th {
+            background: var(--primary-light);
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        .contact-box {
+            background: linear-gradient(135deg, var(--primary-light), transparent);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            border-radius: 8px;
+            padding: 1rem 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .contact-box a {
+            color: var(--primary);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .contact-box a:hover {
+            text-decoration: underline;
+        }
+
+        footer {
+            max-width: 900px;
+            margin: 2rem auto;
+            text-align: center;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+
+        .lang-content {
+            display: none;
+        }
+
+        .lang-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header con selezione lingua -->
+    <header>
+        <div class="brand">
+            <div class="brand-icon">🥗</div>
+            <div class="brand-text">
+                <h1>MealPlan</h1>
+                <p>Android Application Privacy Policy</p>
+            </div>
+        </div>
+        <div class="lang-switch" role="tablist" aria-label="Language Selector">
+            <button class="lang-btn active" id="btn-it" onclick="setLanguage('it')">Italiano</button>
+            <button class="lang-btn" id="btn-en" onclick="setLanguage('en')">English</button>
+        </div>
+    </header>
+
+    <main>
+        <!-- ==================== SEZIONE ITALIANO ==================== -->
+        <div id="content-it" class="lang-content active" lang="it">
+            
+            <div class="hero-banner">
+                <h2>Informativa sulla Privacy</h2>
+                <div class="meta-info">
+                    <span><strong>Applicazione:</strong> MealPlan</span>
+                    <span><strong>Data di efficacia:</strong> 1 Novembre 2026</span>
+                    <span><strong>Ultimo aggiornamento:</strong> 1 Novembre 2026</span>
+                </div>
+                <p>
+                    Questa informativa descrive le modalità con cui l'applicazione <strong>MealPlan</strong> tratta le informazioni quando utilizzi i nostri servizi. Abbiamo progettato MealPlan con il principio cardine della <strong>Privacy by Design</strong>: tutti i tuoi piani alimentari, pasti e liste della spesa risiedono esclusivamente sul tuo dispositivo.
+                </p>
+
+                <div class="badge-grid">
+                    <div class="badge-item">🔒 Zero Dati Personali Raccolti</div>
+                    <div class="badge-item">📱 Dati Salvati Solo in Locale</div>
+                    <div class="badge-item">🚫 Nessuna Pubblicità o Tracciamento</div>
+                    <div class="badge-item">🛡️ Piena Conformità GDPR & Google Play</div>
+                </div>
+            </div>
+
+            <nav class="toc">
+                <h3>Indice dei Contenuti</h3>
+                <ul>
+                    <li><a href="#it-controller">1. Titolare del Trattamento</a></li>
+                    <li><a href="#it-data">2. Tipologia di Dati Trattati</a></li>
+                    <li><a href="#it-permissions">3. Permessi Android Richiesti</a></li>
+                    <li><a href="#it-third-party">4. Servizi e API Esterne</a></li>
+                    <li><a href="#it-storage">5. Archiviazione e Sicurezza dei Dati</a></li>
+                    <li><a href="#it-deletion">6. Cancellazione dei Dati</a></li>
+                    <li><a href="#it-datasafety">7. Tabella Google Play Data Safety</a></li>
+                    <li><a href="#it-children">8. Privacy dei Minori</a></li>
+                    <li><a href="#it-contact">9. Contatti e Assistenza</a></li>
+                </ul>
+            </nav>
+
+            <article id="it-controller" class="section-card">
+                <h3>1. Titolare del Trattamento</h3>
+                <p>
+                    Lo sviluppatore dell'applicazione MealPlan agisce in qualità di Titolare del Trattamento dei dati limitatamente alle comunicazioni volontarie inoltrate dagli utenti:
+                </p>
+                <div class="contact-box">
+                    <strong>Email di contatto dello sviluppatore:</strong><br>
+                    <a href="mailto:devsmapo@gmail.com">devsmapo@gmail.com</a>
+                </div>
+            </article>
+
+            <article id="it-data" class="section-card">
+                <h3>2. Tipologia di Dati Trattati</h3>
+                <p>
+                    L'applicazione <strong>MealPlan non richiede né raccoglie dati personali identificativi</strong> (come nome, cognome, indirizzo email, numero di telefono, coordinate GPS o identificatori biometrici). Non è necessaria alcuna registrazione né la creazione di un account per utilizzare l'app.
+                </p>
+                <ul>
+                    <li><strong>Dati di pianificazione alimentare e spesa:</strong> I titoli dei piani, i pasti inseriti, gli alimenti, le grammature, le note, lo stato di scongelamento e gli articoli spuntati nella lista della spesa vengono memorizzati <strong>esclusivamente sul database locale SQLite/Room del tuo smartphone</strong>. Questi dati non vengono mai inviati a server esterni o cloud proprietari.</li>
+                    <li><strong>Termini di ricerca alimenti:</strong> Quando utilizzi la barra di ricerca nutrizionale, il testo digitato (es. "petto di pollo") viene trasmesso alle API nutrizionali pubbliche per ottenere la lista degli alimenti corrispondenti. Nessun identificativo del dispositivo o dell'utente viene associato alla ricerca.</li>
+                </ul>
+            </article>
+
+            <article id="it-permissions" class="section-card">
+                <h3>3. Permessi Android Richiesti e Finalità</h3>
+                <p>
+                    L'applicazione richiede solo i permessi strettamente necessari al funzionamento delle caratteristiche richieste dall'utente:
+                </p>
+                <ul>
+                    <li>
+                        <strong><code>android.permission.INTERNET</code> (Accesso di rete):</strong><br>
+                        Utilizzato unicamente per effettuare le query di ricerca nutrizionale verso i database pubblici Open Food Facts e USDA FoodData Central. Non viene utilizzato per caricare dati personali, inviare telemetria o scaricare annunci pubblicitari.
+                    </li>
+                    <li>
+                        <strong><code>android.permission.POST_NOTIFICATIONS</code> (Notifiche, da Android 13+):</strong><br>
+                        Utilizzato esclusivamente per inviare promemoria locali e allarmi di scongelamento sul dispositivo (es. avviso serale per scongelare la carne per il pranzo del giorno dopo). Gli allarmi sono schedulati localmente tramite il componente di sistema <code>AlarmManager</code>. Non utilizziamo notifiche push remote (Firebase Cloud Messaging) né tracciamento pubblicitario.
+                    </li>
+                </ul>
+            </article>
+
+            <article id="it-third-party" class="section-card">
+                <h3>4. Servizi e Banche Dati Esterne di Terze Parti</h3>
+                <p>
+                    L'applicazione si interfaccia esclusivamente con fonti aperte di informazione nutrizionale per facilitare l'inserimento dei valori calorici e dei macronutrienti:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Open Food Facts API:</strong> Banca dati aperta e collaborativa di prodotti alimentari. Consulta la loro informativa all'indirizzo <a href="https://world.openfoodfacts.org/terms-of-use" target="_blank" rel="noopener noreferrer">openfoodfacts.org</a>.
+                    </li>
+                    <li>
+                        <strong>USDA FoodData Central:</strong> Database nutrizionale pubblico del Dipartimento dell'Agricoltura degli Stati Uniti.
+                    </li>
+                </ul>
+                <p>
+                    Nessun dato personale, identificatore pubblicitario (Advertising ID) o informazione sul profilo dell'utente viene comunicato a tali servizi.
+                </p>
+            </article>
+
+            <article id="it-storage" class="section-card">
+                <h3>5. Archiviazione, Sicurezza e Trasferimento dei Dati</h3>
+                <p>
+                    Tutti i dati generati dall'applicazione rimangono all'interno dell'ambiente sandbox protetto del sistema operativo Android. Non vi è alcun trasferimento di dati all'estero, né vendita, condivisione o monetizzazione dei dati degli utenti sotto alcuna forma.
+                </p>
+            </article>
+
+            <article id="it-deletion" class="section-card">
+                <h3>6. Conservazione e Cancellazione dei Dati (Diritto all'Oblio)</h3>
+                <p>
+                    Dato che tutti i dati risiedono unicamente sul tuo dispositivo, hai il pieno ed esclusivo controllo sulla loro conservazione e rimozione:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Cancellazione selettiva:</strong> Puoi eliminare o azzerare singoli alimenti, piani o l'intera lista della spesa direttamente dall'interfaccia dell'app.
+                    </li>
+                    <li>
+                        <strong>Cancellazione totale immediata:</strong> Andando in <em>Impostazioni del telefono &gt; App &gt; MealPlan &gt; Spazio di archiviazione &gt; Cancella dati</em> o semplicemente disinstallando l'applicazione, tutti i dati vengono rimossi istantaneamente e in modo irreversibile dal dispositivo.
+                    </li>
+                </ul>
+            </article>
+
+            <article id="it-datasafety" class="section-card">
+                <h3>7. Dichiarazione di Sicurezza dei Dati (Google Play Data Safety)</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Domanda Google Play Console</th>
+                                <th>Dichiarazione MealPlan</th>
+                                <th>Dettagli Tecnici</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>L'app raccoglie dati personali?</td>
+                                <td><strong>NO</strong></td>
+                                <td>Nessun dato dell'utente viene estratto o raccolto.</td>
+                            </tr>
+                            <tr>
+                                <td>L'app condivide dati con terze parti?</td>
+                                <td><strong>NO</strong></td>
+                                <td>Nessuna condivisione con terze parti o partner pubblicitari.</td>
+                            </tr>
+                            <tr>
+                                <td>Tutti i dati dell'utente vengono crittografati in transito?</td>
+                                <td><strong>SÌ</strong></td>
+                                <td>Le ricerche nutrizionali avvengono esclusivamente tramite protocollo sicuro HTTPS.</td>
+                            </tr>
+                            <tr>
+                                <td>Gli utenti possono richiedere la cancellazione dei dati?</td>
+                                <td><strong>SÌ</strong></td>
+                                <td>I dati sono locali e cancellabili con la disinstallazione o dall'app.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article id="it-children" class="section-card">
+                <h3>8. Tutela della Privacy dei Minori</h3>
+                <p>
+                    L'applicazione è uno strumento di utilità per l'organizzazione dei pasti familiari e non è diretta a minori di 13 anni (o età equivalente prevista dalle leggi nazionali). Non raccogliamo deliberatamente informazioni relative a minori.
+                </p>
+            </article>
+
+            <article id="it-contact" class="section-card">
+                <h3>9. Contatti e Modifiche all'Informativa</h3>
+                <p>
+                    Eventuali modifiche a questa informativa saranno rese disponibili a questo stesso URL. Per qualsiasi domanda, chiarimento o richiesta riguardante la privacy della nostra applicazione, puoi contattarci in qualsiasi momento:
+                </p>
+                <div class="contact-box">
+                    <strong>Contatto Privacy:</strong><br>
+                    Email: <a href="mailto:devsmapo@gmail.com">devsmapo@gmail.com</a>
+                </div>
+            </article>
+
+        </div>
+
+        <!-- ==================== SEZIONE INGLESE ==================== -->
+        <div id="content-en" class="lang-content" lang="en">
+            
+            <div class="hero-banner">
+                <h2>Privacy Policy</h2>
+                <div class="meta-info">
+                    <span><strong>Application:</strong> MealPlan</span>
+                    <span><strong>Effective Date:</strong> November 1, 2026</span>
+                    <span><strong>Last Updated:</strong> November 1, 2026</span>
+                </div>
+                <p>
+                    This Privacy Policy explains how the <strong>MealPlan</strong> mobile application handles your information. MealPlan is built with the fundamental principle of <strong>Privacy by Design</strong>: your meal plans, dietary records, and grocery shopping lists remain exclusively on your device.
+                </p>
+
+                <div class="badge-grid">
+                    <div class="badge-item">🔒 Zero Personal Data Collected</div>
+                    <div class="badge-item">📱 On-Device Local Storage Only</div>
+                    <div class="badge-item">🚫 No Ads or Tracking SDKs</div>
+                    <div class="badge-item">🛡️ GDPR & Google Play Compliant</div>
+                </div>
+            </div>
+
+            <nav class="toc">
+                <h3>Table of Contents</h3>
+                <ul>
+                    <li><a href="#en-controller">1. Data Controller</a></li>
+                    <li><a href="#en-data">2. Information Handled</a></li>
+                    <li><a href="#en-permissions">3. Android Permissions</a></li>
+                    <li><a href="#en-third-party">4. Third-Party Services & APIs</a></li>
+                    <li><a href="#en-storage">5. Data Storage and Security</a></li>
+                    <li><a href="#en-deletion">6. Data Retention and Deletion</a></li>
+                    <li><a href="#en-datasafety">7. Google Play Data Safety Alignment</a></li>
+                    <li><a href="#en-children">8. Children's Privacy</a></li>
+                    <li><a href="#en-contact">9. Contact Information</a></li>
+                </ul>
+            </nav>
+
+            <article id="en-controller" class="section-card">
+                <h3>1. Data Controller</h3>
+                <p>
+                    The developer of the MealPlan application operates as the Data Controller solely in relation to voluntary communications sent by users:
+                </p>
+                <div class="contact-box">
+                    <strong>Developer Contact Email:</strong><br>
+                    <a href="mailto:devsmapo@gmail.com">devsmapo@gmail.com</a>
+                </div>
+            </article>
+
+            <article id="en-data" class="section-card">
+                <h3>2. Information Handled</h3>
+                <p>
+                    <strong>MealPlan does not request, collect, or store any personally identifiable information</strong> (such as name, email address, phone number, location, or biometric data). No registration or user account is required to use the application.
+                </p>
+                <ul>
+                    <li><strong>Meal Planning & Grocery Data:</strong> Plan titles, scheduled meals, food items, weights, defrost status, and shopping list checkmarks are stored <strong>exclusively in your device's local SQLite/Room database</strong>. This data is never uploaded to remote or proprietary servers.</li>
+                    <li><strong>Search Terms:</strong> When searching for nutritional information, the text you enter (e.g., "chicken breast") is sent to public nutrition APIs to fetch matching results. No user or device identifier is attached to search requests.</li>
+                </ul>
+            </article>
+
+            <article id="en-permissions" class="section-card">
+                <h3>3. Android Permissions & Purpose</h3>
+                <p>
+                    The app only requests the minimum system permissions necessary to perform its intended utility:
+                </p>
+                <ul>
+                    <li>
+                        <strong><code>android.permission.INTERNET</code>:</strong><br>
+                        Used exclusively to execute food search queries against public nutritional databases (Open Food Facts and USDA FoodData Central). It is never used to transmit personal data, telemetry, or serve advertisements.
+                    </li>
+                    <li>
+                        <strong><code>android.permission.POST_NOTIFICATIONS</code> (Android 13+):</strong><br>
+                        Used solely to schedule local defrost reminders configured by the user (e.g., evening notifications to defrost items for the next day) through Android's system <code>AlarmManager</code>. No remote push notifications or cloud messaging services are used.
+                    </li>
+                </ul>
+            </article>
+
+            <article id="en-third-party" class="section-card">
+                <h3>4. Third-Party Services & Open Databases</h3>
+                <p>
+                    The app interfaces solely with open nutritional information sources to assist users in logging calories and macronutrients:
+                </p>
+                <ul>
+                    <li>
+                        <strong>Open Food Facts API:</strong> Open, collaborative database of food products. Review their terms at <a href="https://world.openfoodfacts.org/terms-of-use" target="_blank" rel="noopener noreferrer">openfoodfacts.org</a>.
+                    </li>
+                    <li>
+                        <strong>USDA FoodData Central:</strong> Public agricultural database provided by the U.S. Department of Agriculture.
+                    </li>
+                </ul>
+                <p>
+                    No personal data, device identifiers, or advertising IDs are shared with these services.
+                </p>
+            </article>
+
+            <article id="en-storage" class="section-card">
+                <h3>5. Data Storage and Security</h3>
+                <p>
+                    All app data resides within the sandboxed application storage provided by the Android OS. We do not sell, rent, monetize, or transfer your data to any third party.
+                </p>
+            </article>
+
+            <article id="en-deletion" class="section-card">
+                <h3>6. Data Retention and Deletion (Right to Erasure)</h3>
+                <p>
+                    Because all data is stored strictly on your local device, you hold complete autonomy over your data:
+                </p>
+                <ul>
+                    <li>
+                        <strong>In-App Deletion:</strong> You can delete any food item, meal plan, or reset the shopping list directly inside the app.
+                    </li>
+                    <li>
+                        <strong>Complete Removal:</strong> Navigating to <em>Android Settings &gt; Apps &gt; MealPlan &gt; Storage &gt; Clear Data</em> or simply uninstalling the application permanently deletes all stored data immediately.
+                    </li>
+                </ul>
+            </article>
+
+            <article id="en-datasafety" class="section-card">
+                <h3>7. Google Play Data Safety Alignment</h3>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Google Play Console Question</th>
+                                <th>MealPlan Declaration</th>
+                                <th>Technical Justification</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Does the app collect user data?</td>
+                                <td><strong>NO</strong></td>
+                                <td>No personal data is collected or transmitted to developer servers.</td>
+                            </tr>
+                            <tr>
+                                <td>Does the app share data with third parties?</td>
+                                <td><strong>NO</strong></td>
+                                <td>No data is shared with third parties, brokers, or advertisers.</td>
+                            </tr>
+                            <tr>
+                                <td>Is data encrypted in transit?</td>
+                                <td><strong>YES</strong></td>
+                                <td>All food database queries use secure HTTPS connections.</td>
+                            </tr>
+                            <tr>
+                                <td>Can users request data deletion?</td>
+                                <td><strong>YES</strong></td>
+                                <td>Data is strictly local and removed upon app uninstall or cache clearing.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </article>
+
+            <article id="en-children" class="section-card">
+                <h3>8. Children's Privacy</h3>
+                <p>
+                    MealPlan is a general household utility tool and is not specifically directed at children under the age of 13. We do not knowingly solicit or collect personal information from children.
+                </p>
+            </article>
+
+            <article id="en-contact" class="section-card">
+                <h3>9. Contact Information & Policy Updates</h3>
+                <p>
+                    Any future revisions to this Privacy Policy will be published at this same URL. For any inquiries, feedback, or privacy-related questions, please reach out to:
+                </p>
+                <div class="contact-box">
+                    <strong>Privacy Contact:</strong><br>
+                    Email: <a href="mailto:devsmapo@gmail.com">devsmapo@gmail.com</a>
+                </div>
+            </article>
+
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2026 MealPlan. All rights reserved. | Informativa sulla Privacy / Privacy Policy</p>
+    </footer>
+
+    <script>
+        function setLanguage(lang) {
+            // Aggiorna contenuti
+            document.querySelectorAll('.lang-content').forEach(el => el.classList.remove('active'));
+            const target = document.getElementById('content-' + lang);
+            if (target) {
+                target.classList.add('active');
+            }
+
+            // Aggiorna pulsanti
+            document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+            const activeBtn = document.getElementById('btn-' + lang);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            // Aggiorna attributo lang dell'HTML
+            document.documentElement.lang = lang;
+
+            // Salva preferenza e aggiorna hash/query se desiderato
+            try {
+                localStorage.setItem('mealplan_pref_lang', lang);
+            } catch (e) {}
+        }
+
+        // Rilevamento lingua iniziale (da URL param ?lang=en, localStorage, o lingua browser)
+        (function initLang() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryLang = urlParams.get('lang');
+            if (queryLang === 'en' || queryLang === 'it') {
+                setLanguage(queryLang);
+                return;
+            }
+
+            try {
+                const saved = localStorage.getItem('mealplan_pref_lang');
+                if (saved === 'en' || saved === 'it') {
+                    setLanguage(saved);
+                    return;
+                }
+            } catch (e) {}
+
+            const browserLang = (navigator.language || navigator.userLanguage || '').toLowerCase();
+            if (browserLang.startsWith('en')) {
+                setLanguage('en');
+            } else {
+                setLanguage('it');
+            }
+        })();
+    </script>
+</body>
+</html>

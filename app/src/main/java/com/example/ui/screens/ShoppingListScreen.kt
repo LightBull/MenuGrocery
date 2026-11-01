@@ -778,7 +778,7 @@ fun ShoppingItemRow(
             ) {
                 Checkbox(
                     checked = item.isPurchased,
-                    onCheckedChange = { onToggle() },
+                    onCheckedChange = null,
                     colors = CheckboxDefaults.colors(
                         checkedColor = SagePrimary
                     ),

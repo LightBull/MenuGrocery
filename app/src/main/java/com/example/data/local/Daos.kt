@@ -137,6 +137,9 @@ interface ShoppingListDao {
 
     @Query("DELETE FROM shopping_list_items WHERE isPurchased = 1")
     suspend fun clearPurchased()
+
+    @Query("UPDATE shopping_list_items SET isPurchased = :isPurchased WHERE id = :id")
+    suspend fun updatePurchasedStatus(id: String, isPurchased: Boolean)
 }
 
 @Dao

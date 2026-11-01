@@ -96,4 +96,47 @@ class ExampleRobolectricTest {
             lunchAfter.items.any { it.name == "Risotto ai Funghi Porcini Test" }
         )
     }
+
+    @Test
+    fun `toggleItemPurchased saves to DB and preserves status across shopping list regeneration`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val api = OpenFoodFactsApi.create()
+        val repository = MealPlanRepository(db, api, context)
+
+        repository.initializeDefaultDataIfNeeded()
+
+        // 1. Preleva gli alimenti della lista spesa
+        val initialItems = db.shoppingListDao().getAllItemsSync()
+        assertTrue("La lista della spesa iniziale deve contenere alimenti", initialItems.isNotEmpty())
+
+        val targetItem = initialItems.first { !it.isPurchased }
+
+        // 2. Segna l'alimento come preso
+        repository.toggleItemPurchased(targetItem)
+
+        // 3. Verifica persistenza immediata a DB
+        val itemsAfterToggle = db.shoppingListDao().getAllItemsSync()
+        val toggledItem = itemsAfterToggle.first { it.id == targetItem.id }
+        assertTrue("L'alimento deve risultare acquistato (isPurchased = true) a database!", toggledItem.isPurchased)
+
+        // 4. Simula navigazione / rigenerazione della lista dal piano attivo
+        repository.generateShoppingListFromActivePlan(
+            selectedDays = listOf(1, 2, 3, 4, 5, 6, 7),
+            preserveManualExtras = true
+        )
+
+        // 5. Verifica che l'alimento conservi lo stato isPurchased = true dopo la rigenerazione
+        val itemsAfterRegen = db.shoppingListDao().getAllItemsSync()
+        val itemAfterRegen = itemsAfterRegen.firstOrNull { it.id == targetItem.id }
+        assertNotNull("L'alimento deve essere ancora presente con lo stesso ID", itemAfterRegen)
+        assertTrue("Lo stato acquistato non deve essere azzerato dalla rigenerazione o navigazione!", itemAfterRegen!!.isPurchased)
+
+        // 6. Verifica che il reset manuale esplicito riporti l'articolo a non acquistato
+        repository.resetShoppingListPurchasedStatus()
+        val itemsAfterReset = db.shoppingListDao().getAllItemsSync()
+        val itemAfterReset = itemsAfterReset.first { it.id == targetItem.id }
+        assertFalse("Il reset manuale deve riportare l'articolo a non acquistato", itemAfterReset.isPurchased)
+    }
 }
+
