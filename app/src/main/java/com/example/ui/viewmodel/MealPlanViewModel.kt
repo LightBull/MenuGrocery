@@ -13,7 +13,6 @@ import com.example.data.model.MealType
 import com.example.data.model.MealWithItems
 import com.example.data.model.NutritionalSummary
 import com.example.data.model.QuantityUnit
-import com.example.data.remote.OpenFoodFactsApi
 import com.example.data.repository.MealPlanRepository
 import com.example.notification.DefrostScheduler
 import kotlinx.coroutines.Job
@@ -52,7 +51,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     private val _selectedShoppingDays = MutableStateFlow<Set<Int>>((1..7).toSet())
     val selectedShoppingDays: StateFlow<Set<Int>> = _selectedShoppingDays.asStateFlow()
 
-    // Risultati ricerca alimenti OpenFoodFacts
+    // Risultati ricerca alimenti
     private val _searchResults = MutableStateFlow<List<FoodItemModel>>(emptyList())
     val searchResults: StateFlow<List<FoodItemModel>> = _searchResults.asStateFlow()
 
@@ -107,8 +106,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
     init {
         val db = MealPlanDatabase.getDatabase(application)
-        val api = OpenFoodFactsApi.create()
-        repository = MealPlanRepository(db, api, application)
+        repository = MealPlanRepository(db, application)
 
         // Feedback in caso di aggiornamento schema con ripristino da backup
         com.example.data.local.DatabaseMigrationManager.lastMigrationSummary?.let { summary ->
@@ -329,7 +327,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
-    // --- Ricerca Ibrida Alimenti (Debounce 2 secondi senza input utente) ---
+    // --- Ricerca Alimenti Reattiva (Debounce 250ms) ---
     fun onSearchQueryChanged(query: String) {
         searchJob?.cancel()
         if (query.trim().length < 2) {
@@ -340,7 +338,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
         searchJob = viewModelScope.launch {
             _isSearching.value = true
-            delay(2000) // 2 secondi senza input da parte dell'utente
+            delay(250) // Micro-attesa fluida durante la digitazione
             val results = repository.searchFood(query)
             _searchResults.value = results
             _isSearching.value = false

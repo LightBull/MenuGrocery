@@ -1,6 +1,6 @@
 {
-  "summary":  "Piano per la redazione delle note di rilascio della versione 5.0 per Google Play Console in formato bilingue (italiano e inglese), ottimizzate per rimanere rigorosamente entro il limite massimo di 500 caratteri ciascuna. Evidenziano la persistenza a database della lista spesa, il nuovo layout compatto con giorni affiancati alle quantità, la risoluzione delle notifiche di scongelamento e il pannello di diagnostica.",
-  "updatedAt":  "2026-11-01T13:25:25.971821809Z",
-  "requestFeedback":  true,
-  "userFacing":  true
+  "summary": "Piano di implementazione aggiornato per specificare la modalità di sola lettura per usda_food.db e l'uniformazione della dicitura UI in 'Cerca Alimento'.",
+  "updatedAt": "2026-11-02T21:43:16.703368411Z",
+  "requestFeedback": true,
+  "userFacing": true
 }

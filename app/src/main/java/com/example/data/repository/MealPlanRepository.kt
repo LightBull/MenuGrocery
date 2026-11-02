@@ -13,8 +13,7 @@ import com.example.data.model.MealWithItems
 import com.example.data.model.NutritionalSummary
 import com.example.data.model.QuantityUnit
 import com.example.data.model.FoodCategory
-import com.example.data.remote.OpenFoodFactsApi
-import com.example.data.remote.UsdaFoodDataApi
+import com.example.data.local.usda.UsdaFoodDatabase
 import com.example.notification.DefrostScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -28,9 +27,8 @@ import java.util.UUID
 
 class MealPlanRepository(
     private val database: MealPlanDatabase,
-    private val openFoodFactsApi: OpenFoodFactsApi,
     private val context: Context,
-    private val usdaFoodDataApi: UsdaFoodDataApi = UsdaFoodDataApi.create()
+    private val usdaFoodDatabase: UsdaFoodDatabase = UsdaFoodDatabase.getInstance(context)
 ) {
     private val mealPlanDao = database.mealPlanDao()
     private val mealDao = database.mealDao()
@@ -416,12 +414,12 @@ class MealPlanRepository(
         }
     }
 
-    // --- Ricerca Nutrizionale Ibrida: Ricerca Locale (precedenti inserimenti) + USDA + OpenFoodFacts ---
+    // --- Ricerca Nutrizionale: Ricerca Locale (precedenti inserimenti) + Database Locale USDA (Sola Lettura) ---
     suspend fun searchFood(query: String): List<FoodItemModel> = withContext(Dispatchers.IO) {
         val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return@withContext emptyList()
 
-        // 1. Cerca prima tra gli alimenti già inseriti nel database (evita doppioni, raggruppati per descrizione)
+        // 1. Cerca prima tra gli alimenti già inseriti nel database locale (evita doppioni, raggruppati per descrizione)
         val localEntities = mealFoodItemDao.searchLocalPreviousFoods(cleanQuery)
         val localResults = localEntities.map { entity ->
             FoodItemModel(
@@ -441,99 +439,50 @@ class MealPlanRepository(
             )
         }.distinctBy { it.name.trim().lowercase() }
 
-        // 2. Se non ci sono risultati precedenti, per ogni tentativo iterare la ricerca esterna fino a 5 volte
-        // Non è obbligatorio che entrambi i servizi producano risultati
-        val externalResults = mutableListOf<FoodItemModel>()
-        val maxAttempts = if (localResults.isEmpty()) 5 else 1
+        // 2. Cerca nel database locale USDA (Sola Lettura) in base alla lingua dell'app
+        val appLanguage = try {
+            val appLocale = context.resources.configuration.locales[0]
+            appLocale.language.lowercase()
+        } catch (_: Exception) {
+            "it"
+        }
+        val langCode = if (appLanguage.startsWith("it")) "it" else "en"
 
-        for (attempt in 1..maxAttempts) {
-            val offDeferred = async {
-                try {
-                    val response = openFoodFactsApi.searchProducts(terms = cleanQuery)
-                    response.products?.mapNotNull { product ->
-                        val name = product.productName ?: return@mapNotNull null
-                        val nutriments = product.nutriments
-                        val calories = nutriments?.energyKcal100g ?: nutriments?.energyKcal ?: 0.0
-                        FoodItemModel(
-                            mealId = "",
-                            name = name,
-                            brand = product.brands,
-                            quantity = 100.0,
-                            unit = QuantityUnit.GRAMS,
-                            toDefrost = false,
-                            calories = calories,
-                            protein = nutriments?.proteins100g ?: 0.0,
-                            carbs = nutriments?.carbohydrates100g ?: 0.0,
-                            fat = nutriments?.fat100g ?: 0.0,
-                            imageUrl = product.imageUrl,
-                            source = "OpenFoodFacts", // Pallino rosso
-                            category = FoodCategory.categorize(name).displayName
-                        )
-                    } ?: emptyList()
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-
-            val usdaDeferred = async {
-                try {
-                    val response = usdaFoodDataApi.searchFoods(query = cleanQuery)
-                    response.foods?.mapNotNull { food ->
-                        val name = food.description ?: return@mapNotNull null
-                        val brand = food.brandOwner ?: food.brandName
-                        val nutrients = food.foodNutrients ?: emptyList()
-
-                        var calories = 0.0
-                        var protein = 0.0
-                        var carbs = 0.0
-                        var fat = 0.0
-
-                        for (n in nutrients) {
-                            val nName = (n.nutrientName ?: "").lowercase()
-                            val uName = (n.unitName ?: "").uppercase()
-                            val value = n.value ?: 0.0
-                            when {
-                                nName.contains("energy") || uName == "KCAL" -> if (calories == 0.0) calories = value
-                                nName.contains("protein") -> protein = value
-                                nName.contains("carbohydrate") -> carbs = value
-                                nName.contains("total lipid") || (nName.contains("fat") && !nName.contains("fatty")) -> fat = value
-                            }
-                        }
-
-                        FoodItemModel(
-                            mealId = "",
-                            name = name,
-                            brand = brand,
-                            quantity = 100.0,
-                            unit = QuantityUnit.GRAMS,
-                            toDefrost = false,
-                            calories = calories,
-                            protein = protein,
-                            carbs = carbs,
-                            fat = fat,
-                            imageUrl = null,
-                            source = "USDA", // Pallino rosso
-                            category = FoodCategory.categorize(name).displayName
-                        )
-                    } ?: emptyList()
-                } catch (_: Exception) {
-                    emptyList()
-                }
-            }
-
-            val offList = offDeferred.await()
-            val usdaList = usdaDeferred.await()
-            val attemptList = (offList + usdaList).distinctBy { it.name.trim().lowercase() }
-
-            if (attemptList.isNotEmpty()) {
-                externalResults.addAll(attemptList)
-                break
-            } else if (attempt < maxAttempts) {
-                delay(200)
-            }
+        val usdaDao = usdaFoodDatabase.usdaFoodDao()
+        var usdaSearchResults = usdaDao.searchFoods(query = cleanQuery, langCode = langCode, limit = 40)
+        // Se non trova risultati nella lingua primaria (e la lingua è italiano), effettua fallback su inglese
+        if (usdaSearchResults.isEmpty() && langCode != "en") {
+            usdaSearchResults = usdaDao.searchFoods(query = cleanQuery, langCode = "en", limit = 40)
+        }
+        // Se ancora vuoto, cerca senza filtro lingua
+        if (usdaSearchResults.isEmpty()) {
+            usdaSearchResults = usdaDao.searchFoodsAnyLang(query = cleanQuery, langCode = langCode, limit = 40)
         }
 
-        // Unione risultati: prima i locali (se ci sono), poi gli esterni, senza duplicati
+        val usdaResults = usdaSearchResults.map { result ->
+            val category = if (langCode == "it") {
+                result.categoryIt ?: result.categoryEn ?: FoodCategory.categorize(result.description).displayName
+            } else {
+                result.categoryEn ?: result.categoryIt ?: FoodCategory.categorize(result.description).displayName
+            }
+            FoodItemModel(
+                mealId = "",
+                name = result.description,
+                brand = category,
+                quantity = 100.0,
+                unit = QuantityUnit.GRAMS,
+                toDefrost = false,
+                calories = result.calories ?: 0.0,
+                protein = result.protein ?: 0.0,
+                carbs = result.carbs ?: 0.0,
+                fat = result.fat ?: 0.0,
+                imageUrl = null,
+                source = "USDA", // Pallino rosso
+                category = category
+            )
+        }
+
+        // 3. Unione risultati: prima i locali (se ci sono), poi il catalogo USDA, senza che uno escluda l'altro e senza duplicati
         val combined = mutableListOf<FoodItemModel>()
         val seenNames = mutableSetOf<String>()
 
@@ -544,7 +493,7 @@ class MealPlanRepository(
             }
         }
 
-        for (item in externalResults) {
+        for (item in usdaResults) {
             val key = item.name.trim().lowercase()
             if (seenNames.add(key)) {
                 combined.add(item)

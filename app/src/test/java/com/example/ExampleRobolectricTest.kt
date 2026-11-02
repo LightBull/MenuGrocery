@@ -6,7 +6,6 @@ import com.example.data.local.MealPlanDatabase
 import com.example.data.model.FoodItemModel
 import com.example.data.model.MealType
 import com.example.data.model.QuantityUnit
-import com.example.data.remote.OpenFoodFactsApi
 import com.example.data.repository.MealPlanRepository
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -34,8 +33,7 @@ class ExampleRobolectricTest {
     fun `saveFullPlan preserves day meals and does not wipe selected day`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = MealPlanDatabase.getDatabase(context)
-        val api = OpenFoodFactsApi.create()
-        val repository = MealPlanRepository(db, api, context)
+        val repository = MealPlanRepository(db, context)
 
         // Inizializza i dati dimostrativi (contiene alimenti per tutti i 7 giorni)
         repository.initializeDefaultDataIfNeeded()
@@ -101,8 +99,7 @@ class ExampleRobolectricTest {
     fun `toggleItemPurchased saves to DB and preserves status across shopping list regeneration`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = MealPlanDatabase.getDatabase(context)
-        val api = OpenFoodFactsApi.create()
-        val repository = MealPlanRepository(db, api, context)
+        val repository = MealPlanRepository(db, context)
 
         repository.initializeDefaultDataIfNeeded()
 
@@ -137,6 +134,25 @@ class ExampleRobolectricTest {
         val itemsAfterReset = db.shoppingListDao().getAllItemsSync()
         val itemAfterReset = itemsAfterReset.first { it.id == targetItem.id }
         assertFalse("Il reset manuale deve riportare l'articolo a non acquistato", itemAfterReset.isPurchased)
+    }
+
+    @Test
+    fun `searchFood returns local items with yellow dot and USDA items with red dot`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val repository = MealPlanRepository(db, context)
+
+        repository.initializeDefaultDataIfNeeded()
+
+        // Ricerca di un alimento (es. 'pollo' o 'pasta')
+        val results = repository.searchFood("pollo")
+        assertNotNull(results)
+        assertTrue("La ricerca di alimenti deve restituire risultati", results.isNotEmpty())
+
+        // Verifica che la sorgente sia Local o USDA
+        results.forEach { item ->
+            assertTrue("Ogni alimento deve avere sorgente 'Local' o 'USDA'", item.source == "Local" || item.source == "USDA")
+        }
     }
 }
 

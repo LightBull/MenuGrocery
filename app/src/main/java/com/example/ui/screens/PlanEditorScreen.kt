@@ -1225,7 +1225,7 @@ fun EditFoodItemDialog(
 }
 
 /**
- * Modulo Inline fluido per l'inserimento dell'alimento con ricerca ibrida USDA + OpenFoodFacts.
+ * Modulo Inline fluido per l'inserimento dell'alimento con ricerca rapida nel database.
  * Minimizza i tap ed evita schermate aggiuntive.
  */
 @Composable
@@ -1268,7 +1268,7 @@ fun InlineAddFoodForm(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Campo di ricerca con supporto simultaneo USDA + OpenFoodFacts e debounce di 2 secondi
+            // Campo di ricerca con supporto database USDA e alimenti utilizzati in precedenza
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -1279,7 +1279,7 @@ fun InlineAddFoodForm(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("inline_search_input"),
-                label = { Text("Cerca alimento (2s di pausa) o digita...") },
+                label = { Text("Cerca Alimento") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -1307,7 +1307,7 @@ fun InlineAddFoodForm(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Ricerca USDA & OpenFoodFacts...", fontSize = 11.sp, color = Color.White)
+                    Text("Cerca Alimento...", fontSize = 11.sp, color = Color.White)
                 }
             } else if (searchResults.isNotEmpty()) {
                 Surface(

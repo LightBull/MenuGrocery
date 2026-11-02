@@ -121,14 +121,14 @@ fun AddFoodModalBottomSheet(
                 color = Color.White
             )
             Text(
-                text = "Cerca un prodotto su OpenFoodFacts o inserisci i dati manualmente",
+                text = "Cerca un alimento o inserisci i dati manualmente",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo di ricerca OpenFoodFacts
+            // Campo di ricerca
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -139,7 +139,7 @@ fun AddFoodModalBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("food_search_input"),
-                label = { Text("Cerca alimento (es. Petto di pollo, Riso, Salmone...)") },
+                label = { Text("Cerca Alimento") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = "Cerca")
                 },
@@ -158,7 +158,7 @@ fun AddFoodModalBottomSheet(
                 shape = RoundedCornerShape(14.dp)
             )
 
-            // Indicatore di ricerca e lista risultati OpenFoodFacts
+            // Indicatore di ricerca e lista risultati
             if (isSearching) {
                 Row(
                     modifier = Modifier
@@ -169,7 +169,7 @@ fun AddFoodModalBottomSheet(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Ricerca su OpenFoodFacts in corso...", fontSize = 12.sp, color = Color.White)
+                    Text("Cerca Alimento in corso...", fontSize = 12.sp, color = Color.White)
                 }
             } else if (searchResults.isNotEmpty()) {
                 Surface(
