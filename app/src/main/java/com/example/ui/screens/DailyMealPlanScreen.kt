@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -66,12 +67,14 @@ import com.example.ui.viewmodel.MealPlanViewModel
 fun DailyMealPlanScreen(
     viewModel: MealPlanViewModel,
     onNavigateToPlans: () -> Unit,
+    onNavigateToSettings: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val activePlan by viewModel.activePlan.collectAsState()
     val selectedDay by viewModel.selectedDay.collectAsState()
     val mealsForDay by viewModel.mealsForSelectedDay.collectAsState()
     val dailySummary by viewModel.dailySummary.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     var totalDragX by remember { mutableFloatStateOf(0f) }
     var showDefrostDiagnostics by remember { mutableStateOf(false) }
@@ -132,7 +135,7 @@ fun DailyMealPlanScreen(
                             color = SagePrimaryContainer
                         ) {
                             Text(
-                                text = "PIANO ATTIVO",
+                                text = com.example.ui.i18n.AppStrings.activePlanHeader(currentLanguage),
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -141,7 +144,7 @@ fun DailyMealPlanScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = activePlan?.title ?: "Nessun piano attivo",
+                            text = activePlan?.title ?: com.example.ui.i18n.AppStrings.noActivePlan(currentLanguage),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -161,12 +164,23 @@ fun DailyMealPlanScreen(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         IconButton(
+                            onClick = onNavigateToSettings,
+                            modifier = Modifier.testTag("btn_open_settings")
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.Default.Settings,
+                                contentDescription = com.example.ui.i18n.AppStrings.settingsTitle(currentLanguage),
+                                tint = androidx.compose.ui.graphics.Color.White
+                            )
+                        }
+
+                        IconButton(
                             onClick = { showDefrostDiagnostics = true },
                             modifier = Modifier.testTag("btn_defrost_diagnostics_daily")
                         ) {
                             Icon(
                                 imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = "Diagnostica Notifiche Scongelamento",
+                                contentDescription = com.example.ui.i18n.AppStrings.defrostDiagnostics(currentLanguage),
                                 tint = CartaDaZucchero
                             )
                         }
@@ -176,7 +190,7 @@ fun DailyMealPlanScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.testTag("btn_switch_plan")
                         ) {
-                            Text("Cambia", fontSize = 12.sp)
+                            Text(if (currentLanguage == com.example.data.model.AppLanguage.IT) "Piani" else "Plans", fontSize = 12.sp)
                         }
                     }
                 }

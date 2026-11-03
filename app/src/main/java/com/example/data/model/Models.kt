@@ -66,6 +66,7 @@ data class FoodItemModel(
     val carbs: Double = 0.0,
     val fat: Double = 0.0,
     val imageUrl: String? = null,
-    val source: String = "USDA",
-    val category: String = ""
+    val source: String = "FoodDb",
+    val category: String = "",
+    val secondaryName: String? = null
 )

@@ -51,6 +51,18 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     private val _selectedShoppingDays = MutableStateFlow<Set<Int>>((1..7).toSet())
     val selectedShoppingDays: StateFlow<Set<Int>> = _selectedShoppingDays.asStateFlow()
 
+    private val prefs = application.getSharedPreferences("meal_plan_prefs", android.content.Context.MODE_PRIVATE)
+    private val _currentLanguage = MutableStateFlow(
+        com.example.data.model.AppLanguage.fromCode(prefs.getString("app_language", "it") ?: "it")
+    )
+    val currentLanguage: StateFlow<com.example.data.model.AppLanguage> = _currentLanguage.asStateFlow()
+
+    fun setLanguage(language: com.example.data.model.AppLanguage) {
+        _currentLanguage.value = language
+        prefs.edit().putString("app_language", language.code).apply()
+        loadMealsForSelectedDay()
+    }
+
     // Risultati ricerca alimenti
     private val _searchResults = MutableStateFlow<List<FoodItemModel>>(emptyList())
     val searchResults: StateFlow<List<FoodItemModel>> = _searchResults.asStateFlow()
@@ -339,7 +351,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         searchJob = viewModelScope.launch {
             _isSearching.value = true
             delay(250) // Micro-attesa fluida durante la digitazione
-            val results = repository.searchFood(query)
+            val results = repository.searchFood(query, _currentLanguage.value)
             _searchResults.value = results
             _isSearching.value = false
         }

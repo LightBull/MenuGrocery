@@ -234,7 +234,7 @@ fun DefrostBadge(
 /**
  * Indicatore cromatico di provenienza dell'alimento:
  * Giallo (#FFD54F) = Locale (inserito in precedenza nei pasti)
- * Rosso (#E57373) = Database USDA
+ * Rosso (#E57373) = Database FoodDb (principal_food_tables o food_back_archive)
  */
 @Composable
 fun FoodSourceDot(

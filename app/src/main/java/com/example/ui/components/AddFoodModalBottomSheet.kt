@@ -219,7 +219,15 @@ fun AddFoodModalBottomSheet(
                                         fontSize = 13.sp,
                                         color = Color.White
                                     )
-                                    val srcDesc = if (result.source == "Local") "Archivio locale (già usato)" else result.source
+                                    if (!result.secondaryName.isNullOrBlank()) {
+                                        Text(
+                                            text = result.secondaryName,
+                                            fontSize = 11.sp,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                        )
+                                    }
+                                    val srcDesc = if (result.source == "Local") "Archivio locale (già usato)" else "Database alimenti (FoodDb)"
                                     val brandText = if (!result.brand.isNullOrBlank()) "${result.brand} • " else ""
                                     Text(
                                         text = "$brandText$srcDesc • ${result.calories.toInt()} kcal/100g",

@@ -1,4 +1,4 @@
-package com.example.data.local.usda
+package com.example.data.local.fooddb
 
 import android.content.Context
 import androidx.room.Database
@@ -7,32 +7,29 @@ import androidx.room.RoomDatabase
 
 @Database(
     entities = [
-        CategoryEntity::class,
-        FoodEntity::class,
-        FoodTranslationEntity::class,
-        NutrientEntity::class,
-        FoodNutrientEntity::class
+        PrincipalFoodEntity::class,
+        FoodBackArchiveEntity::class
     ],
     version = 1,
     exportSchema = false
 )
-abstract class UsdaFoodDatabase : RoomDatabase() {
-    abstract fun usdaFoodDao(): UsdaFoodDao
+abstract class FoodDatabase : RoomDatabase() {
+    abstract fun foodDbDao(): FoodDbDao
 
     companion object {
-        const val DATABASE_NAME = "usda_food.db"
+        const val DATABASE_NAME = "FoodDb.db"
 
         @Volatile
-        private var INSTANCE: UsdaFoodDatabase? = null
+        private var INSTANCE: FoodDatabase? = null
 
-        fun getInstance(context: Context): UsdaFoodDatabase {
+        fun getInstance(context: Context): FoodDatabase {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    UsdaFoodDatabase::class.java,
+                    FoodDatabase::class.java,
                     DATABASE_NAME
                 )
-                    .createFromAsset("databases/usda_food.db")
+                    .createFromAsset("databases/FoodDb.db")
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

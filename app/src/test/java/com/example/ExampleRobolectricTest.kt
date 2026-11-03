@@ -137,22 +137,34 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `searchFood returns local items with yellow dot and USDA items with red dot`() = runBlocking {
+    fun `searchFood returns local items with yellow dot and FoodDb items with red dot`() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val db = MealPlanDatabase.getDatabase(context)
         val repository = MealPlanRepository(db, context)
 
         repository.initializeDefaultDataIfNeeded()
 
-        // Ricerca di un alimento (es. 'pollo' o 'pasta')
-        val results = repository.searchFood("pollo")
+        // Ricerca di un alimento (es. 'farro' o 'pollo')
+        val results = repository.searchFood("farro", com.example.data.model.AppLanguage.IT)
         assertNotNull(results)
         assertTrue("La ricerca di alimenti deve restituire risultati", results.isNotEmpty())
 
-        // Verifica che la sorgente sia Local o USDA
+        // Verifica che la sorgente sia Local o FoodDb
         results.forEach { item ->
-            assertTrue("Ogni alimento deve avere sorgente 'Local' o 'USDA'", item.source == "Local" || item.source == "USDA")
+            assertTrue("Ogni alimento deve avere sorgente 'Local' o 'FoodDb'", item.source == "Local" || item.source == "FoodDb")
         }
+    }
+
+    @Test
+    fun `searchFood English search prioritizes english_name with fallback`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val repository = MealPlanRepository(db, context)
+
+        val results = repository.searchFood("spelt", com.example.data.model.AppLanguage.EN)
+        assertNotNull(results)
+        assertTrue("La ricerca in inglese di 'spelt' deve restituire alimenti", results.isNotEmpty())
+        assertTrue("Deve provenire da FoodDb", results.any { it.source == "FoodDb" })
     }
 }
 

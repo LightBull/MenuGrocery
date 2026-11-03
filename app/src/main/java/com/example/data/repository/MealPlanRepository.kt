@@ -13,7 +13,9 @@ import com.example.data.model.MealWithItems
 import com.example.data.model.NutritionalSummary
 import com.example.data.model.QuantityUnit
 import com.example.data.model.FoodCategory
-import com.example.data.local.usda.UsdaFoodDatabase
+import com.example.data.model.AppLanguage
+import com.example.data.local.fooddb.FoodDatabase
+import com.example.data.local.fooddb.FoodSearchResult
 import com.example.notification.DefrostScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -28,7 +30,7 @@ import java.util.UUID
 class MealPlanRepository(
     private val database: MealPlanDatabase,
     private val context: Context,
-    private val usdaFoodDatabase: UsdaFoodDatabase = UsdaFoodDatabase.getInstance(context)
+    private val foodDatabase: FoodDatabase = FoodDatabase.getInstance(context)
 ) {
     private val mealPlanDao = database.mealPlanDao()
     private val mealDao = database.mealDao()
@@ -414,12 +416,12 @@ class MealPlanRepository(
         }
     }
 
-    // --- Ricerca Nutrizionale: Ricerca Locale (precedenti inserimenti) + Database Locale USDA (Sola Lettura) ---
-    suspend fun searchFood(query: String): List<FoodItemModel> = withContext(Dispatchers.IO) {
+    // --- Ricerca Nutrizionale: Precedenti inserimenti (Pallino Giallo) + FoodDb.db (Pallino Rosso, Sola Lettura) ---
+    suspend fun searchFood(query: String, language: AppLanguage = AppLanguage.IT): List<FoodItemModel> = withContext(Dispatchers.IO) {
         val cleanQuery = query.trim()
         if (cleanQuery.isBlank()) return@withContext emptyList()
 
-        // 1. Cerca prima tra gli alimenti già inseriti nel database locale (evita doppioni, raggruppati per descrizione)
+        // 1. Cerca tra gli alimenti già inseriti nel database locale (Pallino Giallo)
         val localEntities = mealFoodItemDao.searchLocalPreviousFoods(cleanQuery)
         val localResults = localEntities.map { entity ->
             FoodItemModel(
@@ -435,54 +437,79 @@ class MealPlanRepository(
                 fat = entity.fat,
                 imageUrl = entity.imageUrl,
                 source = "Local", // Pallino giallo
-                category = entity.category.ifBlank { FoodCategory.categorize(entity.name).displayName }
+                category = entity.category.ifBlank { FoodCategory.categorize(entity.name).displayName },
+                secondaryName = null
             )
         }.distinctBy { it.name.trim().lowercase() }
 
-        // 2. Cerca nel database locale USDA (Sola Lettura) in base alla lingua dell'app
-        val appLanguage = try {
-            val appLocale = context.resources.configuration.locales[0]
-            appLocale.language.lowercase()
-        } catch (_: Exception) {
-            "it"
-        }
-        val langCode = if (appLanguage.startsWith("it")) "it" else "en"
+        // 2. Interroga FoodDb.db (Sola Lettura)
+        val foodDbDao = foodDatabase.foodDbDao()
+        val isItalian = language == AppLanguage.IT
 
-        val usdaDao = usdaFoodDatabase.usdaFoodDao()
-        var usdaSearchResults = usdaDao.searchFoods(query = cleanQuery, langCode = langCode, limit = 40)
-        // Se non trova risultati nella lingua primaria (e la lingua è italiano), effettua fallback su inglese
-        if (usdaSearchResults.isEmpty() && langCode != "en") {
-            usdaSearchResults = usdaDao.searchFoods(query = cleanQuery, langCode = "en", limit = 40)
+        // 2a. Ricerca prioritaria in principal_food_tables
+        var principalSearchResults = if (isItalian) {
+            foodDbDao.searchPrincipalByName(cleanQuery)
+        } else {
+            foodDbDao.searchPrincipalByEnglishName(cleanQuery)
         }
-        // Se ancora vuoto, cerca senza filtro lingua
-        if (usdaSearchResults.isEmpty()) {
-            usdaSearchResults = usdaDao.searchFoodsAnyLang(query = cleanQuery, langCode = langCode, limit = 40)
+        // Fallback in OR se la colonna della lingua attiva non produce risultati
+        if (principalSearchResults.isEmpty()) {
+            principalSearchResults = foodDbDao.searchPrincipalOr(cleanQuery)
         }
 
-        val usdaResults = usdaSearchResults.map { result ->
-            val category = if (langCode == "it") {
-                result.categoryIt ?: result.categoryEn ?: FoodCategory.categorize(result.description).displayName
+        // 2b. Se principal_food_tables non dà risultati, cerca nella tabella food_back_archive
+        val dbSearchResults: List<FoodSearchResult> = if (principalSearchResults.isNotEmpty()) {
+            principalSearchResults
+        } else {
+            var backResults = if (isItalian) {
+                foodDbDao.searchBackByName(cleanQuery)
             } else {
-                result.categoryEn ?: result.categoryIt ?: FoodCategory.categorize(result.description).displayName
+                foodDbDao.searchBackByEnglishName(cleanQuery)
             }
+            if (backResults.isEmpty()) {
+                backResults = foodDbDao.searchBackOr(cleanQuery)
+            }
+            backResults
+        }
+
+        // Mappatura e formattazione bilingue dei risultati da FoodDb.db
+        val foodDbResults = dbSearchResults.map { result ->
+            val primaryName: String
+            val secondaryName: String?
+
+            if (isItalian) {
+                primaryName = result.name.ifBlank { result.englishName ?: "" }
+                secondaryName = if (!result.englishName.isNullOrBlank() && !result.englishName.equals(primaryName, ignoreCase = true)) {
+                    result.englishName
+                } else null
+            } else {
+                primaryName = result.englishName?.ifBlank { null } ?: result.name
+                secondaryName = if (result.name.isNotBlank() && !result.name.equals(primaryName, ignoreCase = true)) {
+                    result.name
+                } else null
+            }
+
+            val category = result.category?.ifBlank { null } ?: FoodCategory.categorize(primaryName).displayName
+
             FoodItemModel(
                 mealId = "",
-                name = result.description,
+                name = primaryName,
                 brand = category,
                 quantity = 100.0,
                 unit = QuantityUnit.GRAMS,
                 toDefrost = false,
-                calories = result.calories ?: 0.0,
-                protein = result.protein ?: 0.0,
-                carbs = result.carbs ?: 0.0,
-                fat = result.fat ?: 0.0,
+                calories = result.calories,
+                protein = result.protein,
+                carbs = result.carbs,
+                fat = result.fat,
                 imageUrl = null,
-                source = "USDA", // Pallino rosso
-                category = category
+                source = "FoodDb", // Pallino rosso
+                category = category,
+                secondaryName = secondaryName
             )
         }
 
-        // 3. Unione risultati: prima i locali (se ci sono), poi il catalogo USDA, senza che uno escluda l'altro e senza duplicati
+        // 3. Unione e de-duplicazione: prima i locali (se presenti), poi FoodDb (principal o back)
         val combined = mutableListOf<FoodItemModel>()
         val seenNames = mutableSetOf<String>()
 
@@ -493,7 +520,7 @@ class MealPlanRepository(
             }
         }
 
-        for (item in usdaResults) {
+        for (item in foodDbResults) {
             val key = item.name.trim().lowercase()
             if (seenNames.add(key)) {
                 combined.add(item)

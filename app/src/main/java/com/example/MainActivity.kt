@@ -38,6 +38,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -72,12 +73,15 @@ fun MealPlanAppRoot(
     viewModel: MealPlanViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    var showSettings by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
     val feedbackMessage by viewModel.userFeedbackMessage.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     val isEditorDirty by viewModel.isEditorDirty.collectAsState()
 
     val handleTabSelection = { targetTab: Int ->
+        showSettings = false
         if (targetTab != selectedTab) {
             if (isEditorDirty) {
                 viewModel.requestTabNavigation(targetTab)
@@ -106,8 +110,12 @@ fun MealPlanAppRoot(
         }
     }
 
-    // Gestione BackHandler per ritorno alla Home (Tab 0) dalle sotto-schermate (se editor non attivo/dirty)
-    BackHandler(enabled = selectedTab != 0 && !isEditorDirty) {
+    // Gestione BackHandler per ritorno da impostazioni o alla Home (Tab 0)
+    BackHandler(enabled = showSettings) {
+        showSettings = false
+    }
+
+    BackHandler(enabled = !showSettings && selectedTab != 0 && !isEditorDirty) {
         selectedTab = 0
     }
 
@@ -116,72 +124,74 @@ fun MealPlanAppRoot(
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .testTag("main_navigation_bar"),
-                containerColor = MaterialTheme.colorScheme.surface,
-                tonalElevation = 6.dp
-            ) {
-                NavigationBarItem(
-                    selected = selectedTab == 0,
-                    onClick = { handleTabSelection(0) },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == 0) Icons.Filled.RestaurantMenu else Icons.Outlined.RestaurantMenu,
-                            contentDescription = "Piano Pasti"
-                        )
-                    },
-                    label = { Text("Piano Pasti", fontSize = 11.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        selectedTextColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f),
-                        indicatorColor = SagePrimary
-                    ),
-                    modifier = Modifier.testTag("nav_tab_meals")
-                )
+            if (!showSettings) {
+                NavigationBar(
+                    modifier = Modifier
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .testTag("main_navigation_bar"),
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    tonalElevation = 6.dp
+                ) {
+                    NavigationBarItem(
+                        selected = selectedTab == 0,
+                        onClick = { handleTabSelection(0) },
+                        icon = {
+                            Icon(
+                                imageVector = if (selectedTab == 0) Icons.Filled.RestaurantMenu else Icons.Outlined.RestaurantMenu,
+                                contentDescription = com.example.ui.i18n.AppStrings.navMealPlan(currentLanguage)
+                            )
+                        },
+                        label = { Text(com.example.ui.i18n.AppStrings.navMealPlan(currentLanguage), fontSize = 11.sp, fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color.White,
+                            unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                            unselectedTextColor = Color.White.copy(alpha = 0.7f),
+                            indicatorColor = SagePrimary
+                        ),
+                        modifier = Modifier.testTag("nav_tab_meals")
+                    )
 
-                NavigationBarItem(
-                    selected = selectedTab == 1,
-                    onClick = { handleTabSelection(1) },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == 1) Icons.Filled.ShoppingCart else Icons.Outlined.ShoppingCart,
-                            contentDescription = "Lista Spesa"
-                        )
-                    },
-                    label = { Text("Lista Spesa", fontSize = 11.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        selectedTextColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f),
-                        indicatorColor = SagePrimary
-                    ),
-                    modifier = Modifier.testTag("nav_tab_shopping")
-                )
+                    NavigationBarItem(
+                        selected = selectedTab == 1,
+                        onClick = { handleTabSelection(1) },
+                        icon = {
+                            Icon(
+                                imageVector = if (selectedTab == 1) Icons.Filled.ShoppingCart else Icons.Outlined.ShoppingCart,
+                                contentDescription = com.example.ui.i18n.AppStrings.navShoppingList(currentLanguage)
+                            )
+                        },
+                        label = { Text(com.example.ui.i18n.AppStrings.navShoppingList(currentLanguage), fontSize = 11.sp, fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color.White,
+                            unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                            unselectedTextColor = Color.White.copy(alpha = 0.7f),
+                            indicatorColor = SagePrimary
+                        ),
+                        modifier = Modifier.testTag("nav_tab_shopping")
+                    )
 
-                NavigationBarItem(
-                    selected = selectedTab == 2,
-                    onClick = { handleTabSelection(2) },
-                    icon = {
-                        Icon(
-                            imageVector = if (selectedTab == 2) Icons.Filled.Layers else Icons.Outlined.Layers,
-                            contentDescription = "I Miei Piani"
-                        )
-                    },
-                    label = { Text("I Miei Piani", fontSize = 11.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
-                    colors = NavigationBarItemDefaults.colors(
-                        selectedIconColor = Color.White,
-                        selectedTextColor = Color.White,
-                        unselectedIconColor = Color.White.copy(alpha = 0.7f),
-                        unselectedTextColor = Color.White.copy(alpha = 0.7f),
-                        indicatorColor = SagePrimary
-                    ),
-                    modifier = Modifier.testTag("nav_tab_plans")
-                )
+                    NavigationBarItem(
+                        selected = selectedTab == 2,
+                        onClick = { handleTabSelection(2) },
+                        icon = {
+                            Icon(
+                                imageVector = if (selectedTab == 2) Icons.Filled.Layers else Icons.Outlined.Layers,
+                                contentDescription = com.example.ui.i18n.AppStrings.navMyPlans(currentLanguage)
+                            )
+                        },
+                        label = { Text(com.example.ui.i18n.AppStrings.navMyPlans(currentLanguage), fontSize = 11.sp, fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = Color.White,
+                            selectedTextColor = Color.White,
+                            unselectedIconColor = Color.White.copy(alpha = 0.7f),
+                            unselectedTextColor = Color.White.copy(alpha = 0.7f),
+                            indicatorColor = SagePrimary
+                        ),
+                        modifier = Modifier.testTag("nav_tab_plans")
+                    )
+                }
             }
         }
     ) { innerPadding ->
@@ -191,19 +201,27 @@ fun MealPlanAppRoot(
                 .padding(innerPadding),
             color = MaterialTheme.colorScheme.background
         ) {
-            when (selectedTab) {
-                0 -> DailyMealPlanScreen(
+            if (showSettings) {
+                com.example.ui.screens.SettingsScreen(
                     viewModel = viewModel,
-                    onNavigateToPlans = { selectedTab = 2 }
+                    onNavigateBack = { showSettings = false }
                 )
-                1 -> ShoppingListScreen(
-                    viewModel = viewModel
-                )
-                2 -> MealPlansManagementScreen(
-                    viewModel = viewModel,
-                    onPlanActivated = { selectedTab = 0 },
-                    onNavigateToTab = { selectedTab = it }
-                )
+            } else {
+                when (selectedTab) {
+                    0 -> DailyMealPlanScreen(
+                        viewModel = viewModel,
+                        onNavigateToPlans = { selectedTab = 2 },
+                        onNavigateToSettings = { showSettings = true }
+                    )
+                    1 -> ShoppingListScreen(
+                        viewModel = viewModel
+                    )
+                    2 -> MealPlansManagementScreen(
+                        viewModel = viewModel,
+                        onPlanActivated = { selectedTab = 0 },
+                        onNavigateToTab = { selectedTab = it }
+                    )
+                }
             }
         }
     }

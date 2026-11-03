@@ -1268,7 +1268,7 @@ fun InlineAddFoodForm(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Campo di ricerca con supporto database USDA e alimenti utilizzati in precedenza
+            // Campo di ricerca con supporto database FoodDb e alimenti utilizzati in precedenza
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = {
@@ -1336,9 +1336,9 @@ fun InlineAddFoodForm(
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text("Locale", fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                FoodSourceDot(source = "Remote")
+                                FoodSourceDot(source = "FoodDb")
                                 Spacer(modifier = Modifier.width(3.dp))
-                                Text("Esterno", fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
+                                Text("FoodDb", fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
                             }
                         }
                         val displayedResults = if (showAllResults) searchResults else searchResults.take(5)
@@ -1370,7 +1370,15 @@ fun InlineAddFoodForm(
                                         fontWeight = FontWeight.Medium,
                                         color = Color.White
                                     )
-                                    val sourceText = if (item.source == "Local") "Archivio interno" else item.source
+                                    if (!item.secondaryName.isNullOrBlank()) {
+                                        Text(
+                                            text = item.secondaryName,
+                                            fontSize = 11.sp,
+                                            color = Color.White.copy(alpha = 0.7f),
+                                            fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                                        )
+                                    }
+                                    val sourceText = if (item.source == "Local") "Archivio interno" else "FoodDb"
                                     val brandText = if (!item.brand.isNullOrBlank()) "${item.brand} • " else ""
                                     Text(
                                         text = "$brandText$sourceText • ${item.calories.toInt()} kcal/100g",
