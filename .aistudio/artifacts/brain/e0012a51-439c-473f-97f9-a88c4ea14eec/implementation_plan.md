@@ -1,150 +1,121 @@
-# Integrazione FoodDb.db (Sola Lettura) & Gestione Lingua Applicazione
+# Internazionalizzazione Globale & Nuova TopAppBar con Ingranaggio
 
-Transizione completa alla nuova sorgente dati offline `FoodDb.db` composta da due tabelle gerarchiche (`principal_food_tables` primaria e `food_back_archive` di fallback), ricerca nutrizionale bilingue intelligente (`name` / `english_name`) con de-duplicazione, indicatore cromatico giallo/rosso e schermata dedicata Impostazioni con selettore lingua (Italiano / Inglese) reattivo per l'intera interfaccia.
+Revisione completa del sistema linguistico per garantire che la selezione della lingua (Italiano / Inglese) aggiorni istantaneamente **ogni singolo testo dell'intera applicazione** (titoli di pagina, menù, nomi dei pasti, giorni della settimana, categorie spesa, etichette dei form, dialoghi di conferma, riepiloghi nutrizionali e titoli/note dei piani predefiniti) e introduzione di una **TopAppBar globale fissa in alto** con titolo della pagina attiva e icona impostazioni (ingranaggio) posizionata a destra.
 
 ---
 
 ### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Tutte le decisioni critiche sono state chiarite e confermate in Fase 1:
-> - **Strategia di ricerca nel DB**: La ricerca interroga prima la colonna corrispondente alla lingua attiva dell'app (`name` per Italiano, `english_name` per Inglese). Se non produce risultati, applica automaticamente il fallback in `OR` su entrambe le colonne per massimizzare la reperibilità.
-> - **Accesso Impostazioni**: Icona a forma di ingranaggio (`Icons.Default.Settings`) visibile nella barra superiore dell'applicazione, con apertura di una schermata dedicata alle impostazioni.
-> - **Formato nome alimento selezionato**: Nei risultati di ricerca viene mostrato il nome nella lingua attiva con l'altra lingua come sottotitolo (se presente e differente); all'atto della selezione viene salvato il nome nella lingua attiva.
-> - **Integrità & Sola Lettura**: `FoodDb.db` viene integrato tramite Room ORM configurato rigorosamente in sola lettura (nessuna operazione di insert/update/delete esposta).
+> Decisioni chiarite e confermate in Fase 1:
+> - **TopAppBar Globale**: Invece di barre sparse o pulsanti isolati nei banner, viene creata una TopAppBar standard in cima all'applicazione visibile su tutte le sezioni principali, con titolo della sezione attiva allineato a sinistra e icona ingranaggio (`Icons.Default.Settings`) posizionata a destra con apposito testTag.
+> - **Copertura Linguistica Integrale**: Ogni stringa visibile all'utente viene collegata dinamicamente allo stato `currentLanguage` (`AppLanguage.IT` / `AppLanguage.EN`), inclusi i titoli e le descrizioni dei piani alimentari predefiniti e dei cibi dimostrativi.
+> - **Persistenza Immediata**: Il cambio lingua nelle impostazioni si applica reattivamente all'intera interfaccia senza riavvio dell'Activity e viene salvato permanentemente nelle SharedPreferences.
 
 ---
 
 ### 1. Overview & Core Concept
 
-- **Cosa fa**: Sostituisce il vecchio database `usda_food.db` con il nuovo database locale pre-confezionato `FoodDb.db` (2.2 MB, ~14.000 alimenti). Effettua la ricerca combinata tra alimenti già usati nei pasti precedenti (pallino giallo) e le tabelle del database (pallino rosso), interrogando primariamente `principal_food_tables` e, solo se questa non produce risultati, la tabella `food_back_archive`.
-- **Integrazione Lingua**: Introduce una gestione centralizzata e reattiva della lingua dell'applicazione (Italiano e Inglese), che aggiorna istantaneamente sia le etichette dell'interfaccia (giorni, tipi pasto, pulsanti, categorie spesa) sia la priorità linguistica nella ricerca alimenti.
-- **Valore per l'utente**: Ricerca ultrarapida completamente offline a latenza zero, copertura sia in lingua italiana che inglese, zero duplicati e piena autonomia nella scelta della lingua di navigazione.
+- **Cosa fa**: Estende il dizionario bilingue tipizzato `AppStrings` per coprire il 100% dei testi dell'applicazione, eliminando qualsiasi stringa hardcoded rimasta in italiano nelle schermate (`DailyMealPlanScreen`, `ShoppingListScreen`, `MealPlansManagementScreen`, `PlanEditorScreen`, `AddFoodModalBottomSheet`, `CommonComponents`). Aggiunge la traduzione dinamica per i nomi dei giorni, i pasti, le unità di misura, le categorie merceologiche e i contenuti dimostrativi predefiniti.
+- **Nuova TopAppBar**: Struttura l'intestazione superiore dell'app con una barra M3 elegante, sfondo coerente con la palette Sage/Dark, titolo della sezione corrente e pulsante ingranaggio ben visibile e accessibile sulla destra.
 
 ---
 
 ### 2. User Experience & Visual Design
 
-#### Key User Flows
-1. **Flusso Ricerca Alimento (AddFoodModalBottomSheet)**:
-   - L'utente tocca un pasto per aggiungere un alimento.
-   - Digitando nel campo di ricerca ("Cerca Alimento"), il sistema raccoglie i risultati:
-     - Scenario A: Alimenti usati in precedenza (pallino giallo) + Alimenti da `principal_food_tables` (pallino rosso).
-     - Scenario B: Alimenti usati in precedenza (pallino giallo) + Alimenti da `food_back_archive` (pallino rosso, se la tabella principale non ha corrispondenze).
-     - Scenario C: Solo alimenti dalla tabella principale (pallino rosso).
-     - Scenario D: Solo alimenti da inserimenti precedenti (pallino giallo).
-   - Ogni elemento mostra il titolo nella lingua attiva, eventuale sottotitolo nella seconda lingua (es. *"Farro perlato, crudo"* con sottotitolo *"Spelt, grain"*), categoria e calorie per 100g.
-   - Toccando l'elemento, i valori nutrizionali (calorie, proteine, carboidrati, grassi) vengono pre-compilati automaticamente.
+#### TopAppBar Globale
+- **Posizione**: Sempre presente in cima allo schermo in tutte le 3 sezioni principali (`Piano Pasti`, `Lista Spesa`, `I Miei Piani`).
+- **Contenuto**:
+  - Titolo a sinistra in grassetto (es. *"Piano Pasti"* / *"Meal Plan"*).
+  - Tasto azione a destra: `IconButton` con `Icons.Default.Settings` (touch target conforme >= 48dp, testTag `"topbar_btn_settings"`).
+- **Apertura Impostazioni**: Al tocco dell'ingranaggio si apre a schermo intero la `SettingsScreen` con pulsante Indietro per tornare comodamente alla schermata precedente.
 
-2. **Flusso Impostazioni Lingua (SettingsScreen)**:
-   - L'utente tocca l'icona ingranaggio nella barra superiore di `DailyMealPlanScreen`.
-   - Si apre la schermata dedicata **Impostazioni**.
-   - Viene mostrata la sezione **Lingua / Language** con schede di selezione per **Italiano** (IT) ed **English** (EN), con radio button interattivi.
-   - Cambiando selezione, l'intera app si aggiorna reattivamente: etichette dei pasti, giorni della settimana, categorie della spesa, pulsanti e testi del bottom sheet. La scelta viene salvata permanentemente in SharedPreferences.
-   - Pulsante Indietro per tornare comodamente al piano pasti.
-
-#### Visual Identity & Theme
-- **Colori Guida**: Palette organica Sage & Slate (`SagePrimary`, `SagePrimaryContainer`, `DarkSurface`, `DarkBackground`).
-- **Indicatori di Provenienza (Dot Color System)**:
-  - Giallo caldi (`#FFD54F`): Archivio pasti già utilizzati dall'utente.
-  - Rosso chiaro (`#E57373`): Database alimentare `FoodDb.db` (sia `principal_food_tables` che `food_back_archive`).
-- **Tipografia**: Material 3 Typography con font scalabili `sp`, titoli chiari e micro-testi informativi per i nutrienti e le lingue secondarie.
-
----
-
-### 3. Key Product Decisions & Trade-Offs
-
-- **Room ORM per FoodDb.db**:
-  - *Scelta*: Utilizzo di `Room.databaseBuilder(...).createFromAsset("databases/FoodDb.db")` con DAO dedicato di sola lettura (`FoodDbDao`) contenente esclusivamente query `@Query(SELECT ...)`.
-  - *Motivazione*: Massima aderenza alle linee guida Android e garanzia formale di sola lettura.
-  - *Integrità Schema*: Le tabelle `principal_food_tables` (food_code) e `food_back_archive` (id) nel file SQLite asset vengono allineate con le chiavi primarie attese da Room per consentire la validazione istantanea senza discrepanze di schema.
-
-- **Gerarchia di Ricerca & De-duplicazione**:
-  - *Scelta*: Se `principal_food_tables` restituisce risultati, non viene interrogata `food_back_archive`. Se invece `principal_food_tables` è vuota, viene interrogata `food_back_archive`. I risultati locali (precedenti) vengono sempre preservati e affiancati.
-  - *Motivazione*: Rispetta fedelmente la regola richiesta dall'utente, garantendo alte prestazioni e prevenendo l'eccesso di duplicati da archivi secondari più estesi.
-
-- **Gestione Lingua in Jetpack Compose**:
-  - *Scelta*: Modello `AppLanguageManager` reattivo con `StateFlow<AppLanguage>` esposto nel `MealPlanViewModel` e sincronizzato con `SharedPreferences`. Tutte le stringhe dell'app sono organizzate in un catalogo bilingue tipizzato (`AppStrings`).
-  - *Motivazione*: Consente un cambio lingua immediato in-memory a runtime senza dover riavviare l'Activity o provocare glitch visivi.
+#### Traduzione a 360 Gradi
+1. **Navigazione & Schede**:
+   - `Piano Pasti` ⟷ `Meal Plan`
+   - `Lista Spesa` ⟷ `Shopping List`
+   - `I Miei Piani` ⟷ `My Plans`
+2. **Pasti & Orari**:
+   - `Colazione`, `Spuntino Mattutino`, `Pranzo`, `Spuntino Pomeridiano`, `Cena` ⟷ `Breakfast`, `Morning Snack`, `Lunch`, `Afternoon Snack`, `Dinner`.
+   - `Orario consigliato:` ⟷ `Recommended time:`.
+3. **Giorni della Settimana**:
+   - `Lunedì` .. `Domenica` (Lun..Dom) ⟷ `Monday` .. `Sunday` (Mon..Sun).
+4. **Categorie della Spesa / Corsie**:
+   - `Frutta e Verdura` ⟷ `Fruits & Vegetables`
+   - `Carne e Pesce` ⟷ `Meat & Seafood`
+   - `Latticini e Uova` ⟷ `Dairy & Eggs`
+   - `Cereali, Pane e Pasta` ⟷ `Grains, Bread & Pasta`
+   - `Dispensa e Condimenti` ⟷ `Pantry & Condiments`
+   - `Extra e Cura della Casa` ⟷ `Extra & Household`
+5. **Creazione & Modifica Piano (PlanEditorScreen & MealPlansManagementScreen)**:
+   - Campi di input: *"Nome del Piano *" ⟷ *"Plan Name *"*, *"Note o Obiettivi"* ⟷ *"Notes or Goals"*, *"Imposta come attivo"* ⟷ *"Set as active"*.
+   - Pulsanti e dialoghi: *"Nuovo Piano"* ⟷ *"New Plan"*, *"Salva"* ⟷ *"Save"*, *"Esci senza salvare"* ⟷ *"Exit without saving"*, *"Modifiche non salvate"* ⟷ *"Unsaved changes"*, *"Copia alimento"* ⟷ *"Copy food"*.
+6. **Lista della Spesa & Dispensa (ShoppingListScreen)**:
+   - *"Cerca nella spesa..."* ⟷ *"Search grocery..."*
+   - *"Genera Lista Aggregata"* ⟷ *"Generate Combined List"*, *"Ripristina"* ⟷ *"Reset All"*, *"Extra"* ⟷ *"Add Extra"*.
+   - Dialoghi di regolazione dispensa: *"Fabbisogno dai pasti"*, *"Già in frigo / dispensa"*, *"Quantità reale da comprare"*.
+7. **Piani Predefiniti & Alimenti Dimostrativi**:
+   - *"Piano Benessere Mediterraneo"* ⟷ *"Mediterranean Wellness Plan"*
+   - Cibi demo (Yogurt greco, Fiocchi d'avena, Pollo ai ferri, Riso integrale, Mela, Salmone, Broccoli) tradotti dinamicamente a vista.
 
 ---
 
-### 4. Technical Architecture & Data Strategy
+### 3. Technical Architecture & Component Mapping
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │                              MainActivity                              │
+│                                                                        │
+│   ┌────────────────────────────────────────────────────────────────┐   │
+│   │ TopAppBar: [Titolo Dinamico]              [Icons.Default.Settings] │   │
+│   └────────────────────────────────────────────────────────────────┘   │
 │                                   │                                    │
 │   ┌───────────────────────────────┴────────────────────────────────┐   │
-│   │ TopAppBar Action: [Icons.Default.Settings]                     │   │
-│   ▼                                                                ▼   │
-│ ┌───────────────────────────┐                        ┌─────────────┴─┐ │
-│ │ DailyMealPlanScreen       │                        │ SettingsScreen│ │
-│ │ (Pasti, Giorni, Totali)   │                        │ (Lingua IT/EN)│ │
-│ └─────────────┬─────────────┘                        └─────────────┬─┘ │
-│               │                                                    │   │
-│               ▼                                                    │   │
-│ ┌───────────────────────────┐                                      │   │
-│ │ AddFoodModalBottomSheet   │                                      │   │
-│ │ (Ricerca reattiva 250ms)  │                                      │   │
-│ └─────────────┬─────────────┘                                      │   │
-└───────────────┼────────────────────────────────────────────────────┼───┘
-                │                                                    │
-                ▼                                                    ▼
-   ┌─────────────────────────┐                         ┌─────────────────┐
-   │    MealPlanViewModel    │◄────────────────────────┤AppLanguageState │
-   └────────────┬────────────┘                         └─────────────────┘
-                │
-                ▼
-   ┌────────────────────────────────────────────────────────┐
-   │                   MealPlanRepository                   │
-   │                                                        │
-   │  ┌────────────────────────┐  ┌──────────────────────┐  │
-   │  │   MealPlanDatabase     │  │    FoodDatabase      │  │
-   │  │   (Lettura / Scrittura)│  │   (SOLA LETTURA)     │  │
-   │  │   - Alimenti usati     │  │   - principal_tables │  │
-   │  │   - Piani & Spesa      │  │   - food_back_archive│  │
-   │  └────────────────────────┘  └──────────────────────┘  │
-   └────────────────────────────────────────────────────────┘
+│   ▼                               ▼                                ▼   │
+│ ┌───────────────────┐ ┌───────────────────────┐ ┌───────────────────┐  │
+│ │DailyMealPlanScreen│ │  ShoppingListScreen   │ │MealPlansManagement│  │
+│ │(Pasti, Totali,    │ │  (Corsie, Dispensa,   │ │(Elenco piani,     │  │
+│ │ Giorni tradotti)  │ │   Extra, Dialoghi)    │ │ Crea/Modifica/Del)│  │
+│ └─────────┬─────────┘ └───────────┬───────────┘ └─────────┬─────────┘  │
+│           │                       │                       │            │
+│           ▼                       ▼                       ▼            │
+│ ┌───────────────────┐ ┌───────────────────────┐ ┌───────────────────┐  │
+│ │AddFoodBottomSheet │ │  PlanEditorScreen     │ │   SettingsScreen  │  │
+│ │(Form & Ricerca)   │ │  (Editor 7 giorni)    │ │   (Selettore IT/EN│  │
+│ └───────────────────┘ └───────────────────────┘ └───────────────────┘  │
+│                                                                        │
+│   ▲                                                                    │
+│   └──────────────────── ViewModel.currentLanguage ────────────────────┘│
+└────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Mapping Colonne Nutrizionali
-- **`principal_food_tables`**:
-  - Nome: `name` (IT), `english_name` (EN)
-  - Calorie: `energy_kcal`
-  - Proteine: `proteins`
-  - Carboidrati: `available_carbohydrates`
-  - Grassi: `lipids`
-  - Categoria: `category`
-- **`food_back_archive`**:
-  - Nome: `name` (IT), `english_name` (EN)
-  - Calorie: `Kcal`
-  - Proteine: `Proteins`
-  - Carboidrati: `Carbohydrates`
-  - Grassi: `Fat`
-  - Categoria: Categorizzazione dinamica automatica
+#### Moduli & File Coinvolti:
+1. **`AppStrings.kt`**: Ampliamento con cataloghi bilingue completi per tutte le sezioni (editor, shopping, management, dialoghi, dispense, piani predefiniti).
+2. **`FoodCategory.kt`**: Aggiunta di `getLocalizedName(lang: AppLanguage)` per ciascuna categoria alimentare.
+3. **`Models.kt`**: Localizzazione dinamica di `QuantityUnit`, `DayOfWeekInfo`, `MealType`.
+4. **`MainActivity.kt`**: Inserimento della `TopAppBar` globale con titolo dinamico e pulsante ingranaggio a destra; passaggio di `currentLanguage` a tutte le sotto-schermate.
+5. **`DailyMealPlanScreen.kt`**: Rimozione dell'icona ingranaggio dal banner interno (spostata nella TopAppBar globale) e traduzione di tutti i testi di intestazione, giorni, orari e alimenti.
+6. **`ShoppingListScreen.kt`**: Collegamento di tutti i chip, pulsanti, dialoghi di dispensa, extra e intestazioni di reparto ad `AppStrings`.
+7. **`MealPlansManagementScreen.kt`**: Collegamento dei dialoghi di creazione/eliminazione piano, badge di stato e schede piano ad `AppStrings`.
+8. **`PlanEditorScreen.kt`**: Traduzione completa del form di modifica piano, dell'editor dei pasti, dei preset di quantità, del dialogo di copia e del dialogo di modifiche non salvate.
 
 ---
 
 ### Piano di Esecuzione delle Modifiche
 
-1. **Configurazione DB Asset `FoodDb.db`**:
-   - Assicurare la definizione delle chiavi primarie sul database pre-confezionato in assets per la compatibilità con Room ORM.
-2. **Definizione Struttura Dati Room (Sola Lettura)**:
-   - Creazione entità `PrincipalFoodEntity` e `FoodBackArchiveEntity`.
-   - Creazione DAO `FoodDbDao` con metodi di ricerca prioritari (lingua attiva + fallback OR) e ritorno dati nutrizionali.
-   - Creazione classe database `FoodDatabase` con `.createFromAsset("databases/FoodDb.db")`.
-3. **Gestione Centralizzata Lingue (`AppLanguageManager` & `AppStrings`)**:
-   - Definizione enum `AppLanguage` (`IT`, `EN`).
-   - Catalogo bilingue `AppStrings` per navigazione, schermate, giorni, pasti, categorie alimentari e messaggi.
-   - Persistenza della lingua in SharedPreferences.
-4. **Aggiornamento Logica di Ricerca nel Repository**:
-   - Riorganizzazione di `searchFood` secondo i 3 scenari (locali + principal, oppure locali + back).
-   - Generazione dei modelli con visualizzazione bilingue (titolo principale + sottotitolo lingua secondaria).
-5. **Creazione Schermata Impostazioni & Integrazione UI**:
-   - `SettingsScreen` con selettore lingua elegante a schede con icone e radio button.
-   - Icona ingranaggio nella barra dell'applicazione.
-   - Collegamento di tutti i testi di `MainActivity`, `DailyMealPlanScreen`, `ShoppingListScreen`, `PlanEditorScreen` e `AddFoodModalBottomSheet` alla lingua selezionata.
-6. **Verifica & Test**:
-   - Esecuzione unit test con Robolectric.
-   - Compilazione con `compile_applet`.
+1. **Estensione `AppStrings.kt` & Modelli Dati**:
+   - Aggiunta di tutte le chiavi bilingue mancanti per editor, gestione piani, lista spesa e traduzione piani/alimenti demo.
+   - Aggiunta di metodi di traduzione dinamica per `FoodCategory`, `QuantityUnit`, `MealType` e `DayOfWeekInfo`.
+2. **TopAppBar Globale in `MainActivity.kt`**:
+   - Creazione della `TopAppBar` nello Scaffold di `MainActivity`, con titolo basato sul tab attivo e icona ingranaggio a destra.
+   - Rimozione dei controlli ingranaggio duplicati dalle sotto-schermate.
+3. **Aggiornamento Schermate Utente**:
+   - Aggiornamento di `DailyMealPlanScreen.kt`.
+   - Aggiornamento di `ShoppingListScreen.kt`.
+   - Aggiornamento di `MealPlansManagementScreen.kt`.
+   - Aggiornamento di `PlanEditorScreen.kt`.
+   - Aggiornamento di `CommonComponents.kt`.
+4. **Verifica & Test**:
+   - Esecuzione dei test Robolectric (`gradle :app:testDebugUnitTest`).
+   - Verifica di compilazione (`compile_applet`).
+   - Aggiornamento APK.

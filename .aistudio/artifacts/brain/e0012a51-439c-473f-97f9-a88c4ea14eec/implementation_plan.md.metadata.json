@@ -1,6 +1,6 @@
 {
-  "summary": "Piano di implementazione per la transizione al nuovo database FoodDb.db (sola lettura) con tabelle principal_food_tables e food_back_archive, ricerca bilingue reattiva con fallback OR, schermata dedicata Impostazioni lingua (Italiano / Inglese) e aggiornamento completo dell'interfaccia.",
-  "updatedAt": "2026-11-03T17:29:58.541505449Z",
+  "summary": "Piano di implementazione per l'internazionalizzazione completa dell'applicazione (Italiano/Inglese su tutte le schermate, dialoghi, campi, categorie, giorni e piani predefiniti) e creazione della TopAppBar globale con icona ingranaggio posizionata a destra.",
+  "updatedAt": "2026-11-03T18:22:09.202157869Z",
   "requestFeedback": true,
   "userFacing": true
 }

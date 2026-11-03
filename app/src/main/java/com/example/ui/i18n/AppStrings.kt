@@ -5,6 +5,7 @@ import com.example.data.model.MealType
 
 object AppStrings {
 
+    // --- Navigazione & Sezioni Principali ---
     fun navMealPlan(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Piano Pasti"
         AppLanguage.EN -> "Meal Plan"
@@ -20,9 +21,20 @@ object AppStrings {
         AppLanguage.EN -> "My Plans"
     }
 
+    // --- Intestazione & Titoli Schermata Pasti ---
     fun activePlanHeader(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "PIANO ATTIVO"
         AppLanguage.EN -> "ACTIVE PLAN"
+    }
+
+    fun activePlanBadge(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Piano Attivo"
+        AppLanguage.EN -> "Active Plan"
+    }
+
+    fun testDefrostNotification(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Test Notifica Scongelamento"
+        AppLanguage.EN -> "Test Defrost Notification"
     }
 
     fun noActivePlan(lang: AppLanguage): String = when (lang) {
@@ -35,11 +47,32 @@ object AppStrings {
         AppLanguage.EN -> "Manage Plans"
     }
 
+    fun changePlan(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Cambia"
+        AppLanguage.EN -> "Change"
+    }
+
     fun defrostDiagnostics(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Diagnostica Scongelamento"
         AppLanguage.EN -> "Defrost Diagnostics"
     }
 
+    fun recommendedTime(time: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Orario consigliato: $time"
+        AppLanguage.EN -> "Recommended time: $time"
+    }
+
+    fun noFoodPlannedInMeal(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nessun alimento programmato per questo pasto."
+        AppLanguage.EN -> "No food items planned for this meal."
+    }
+
+    fun dailyMacroSummaryTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Riepilogo Nutrizionale Giornaliero"
+        AppLanguage.EN -> "Daily Nutritional Summary"
+    }
+
+    // --- Impostazioni ---
     fun settingsTitle(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Impostazioni"
         AppLanguage.EN -> "Settings"
@@ -85,9 +118,15 @@ object AppStrings {
         AppLanguage.EN -> "Back"
     }
 
+    // --- Ricerca Alimenti & BottomSheet ---
     fun searchFoodPlaceholder(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Cerca Alimento"
         AppLanguage.EN -> "Search Food"
+    }
+
+    fun searchFoodHint(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Cerca un alimento o inserisci i dati manualmente"
+        AppLanguage.EN -> "Search for a food item or enter data manually"
     }
 
     fun tapToSelect(lang: AppLanguage): String = when (lang) {
@@ -111,8 +150,8 @@ object AppStrings {
     }
 
     fun sourceFoodDbLabel(lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> "Database alimenti"
-        AppLanguage.EN -> "Food database"
+        AppLanguage.IT -> "Database alimenti (FoodDb)"
+        AppLanguage.EN -> "Food database (FoodDb)"
     }
 
     fun foodNameLabel(lang: AppLanguage): String = when (lang) {
@@ -128,6 +167,11 @@ object AppStrings {
     fun quantityLabel(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Quantità"
         AppLanguage.EN -> "Quantity"
+    }
+
+    fun unitLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Unità di misura"
+        AppLanguage.EN -> "Unit of measurement"
     }
 
     fun defrostReminderLabel(lang: AppLanguage): String = when (lang) {
@@ -161,8 +205,8 @@ object AppStrings {
     }
 
     fun deleteFood(lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> "Elimina alimento"
-        AppLanguage.EN -> "Delete food"
+        AppLanguage.IT -> "Elimina Alimento"
+        AppLanguage.EN -> "Delete Food"
     }
 
     fun cancel(lang: AppLanguage): String = when (lang) {
@@ -173,6 +217,11 @@ object AppStrings {
     fun close(lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> "Chiudi"
         AppLanguage.EN -> "Close"
+    }
+
+    fun save(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Salva"
+        AppLanguage.EN -> "Save"
     }
 
     fun kcal(lang: AppLanguage): String = "kcal"
@@ -192,22 +241,415 @@ object AppStrings {
         AppLanguage.EN -> "Fat"
     }
 
-    fun mealTypeName(type: MealType, lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> when (type) {
-            MealType.BREAKFAST -> "Colazione"
-            MealType.SNACK_AM -> "Spuntino"
-            MealType.LUNCH -> "Pranzo"
-            MealType.SNACK_PM -> "Merenda"
-            MealType.DINNER -> "Cena"
-        }
-        AppLanguage.EN -> when (type) {
-            MealType.BREAKFAST -> "Breakfast"
-            MealType.SNACK_AM -> "Morning Snack"
-            MealType.LUNCH -> "Lunch"
-            MealType.SNACK_PM -> "Afternoon Snack"
-            MealType.DINNER -> "Dinner"
+    fun proteinAbbrev(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Prot"
+        AppLanguage.EN -> "Prot"
+    }
+
+    fun carbsAbbrev(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Carb"
+        AppLanguage.EN -> "Carbs"
+    }
+
+    fun fatAbbrev(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Gras"
+        AppLanguage.EN -> "Fat"
+    }
+
+    // --- Lista Spesa (ShoppingListScreen) ---
+    fun shoppingListTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Lista della Spesa"
+        AppLanguage.EN -> "Shopping List"
+    }
+
+    fun shoppingListSearchPlaceholder(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Cerca nella spesa (alimento, reparto, giorno)..."
+        AppLanguage.EN -> "Search grocery (food, aisle, day)..."
+    }
+
+    fun daysFilterAll(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Tutti (Lun - Dom)"
+        AppLanguage.EN -> "All (Mon - Sun)"
+    }
+
+    fun daysFilterStartWeek(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Inizio (Lun - Gio)"
+        AppLanguage.EN -> "Weekdays (Mon - Thu)"
+    }
+
+    fun daysFilterWeekend(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Weekend (Ven - Dom)"
+        AppLanguage.EN -> "Weekend (Fri - Sun)"
+    }
+
+    fun btnGenerateAggregate(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Genera Lista Aggregata"
+        AppLanguage.EN -> "Generate Combined List"
+    }
+
+    fun btnResetList(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Ripristina"
+        AppLanguage.EN -> "Reset All"
+    }
+
+    fun btnAddExtra(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Extra"
+        AppLanguage.EN -> "Add Extra"
+    }
+
+    fun btnShareList(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Condividi"
+        AppLanguage.EN -> "Share"
+    }
+
+    fun btnClearChecked(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Pulisci Acquistati"
+        AppLanguage.EN -> "Clear Checked"
+    }
+
+    fun emptyShoppingListTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nessun prodotto in lista"
+        AppLanguage.EN -> "No items in shopping list"
+    }
+
+    fun emptyShoppingListSubtitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Tocca 'Genera Lista Aggregata' per prelevare gli ingredienti dal piano attivo."
+        AppLanguage.EN -> "Tap 'Generate Combined List' to fetch ingredients from the active meal plan."
+    }
+
+    fun dialogAddExtraTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Aggiungi Articolo Extra"
+        AppLanguage.EN -> "Add Extra Item"
+    }
+
+    fun dialogAdjustPantryTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Regola Quantità & Dispensa"
+        AppLanguage.EN -> "Adjust Quantity & Pantry"
+    }
+
+    fun foodNeedFromMeals(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Fabbisogno dai pasti:"
+        AppLanguage.EN -> "Required from meals:"
+    }
+
+    fun inPantryLabel(unit: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Già in frigo / dispensa ($unit)"
+        AppLanguage.EN -> "Already in fridge / pantry ($unit)"
+    }
+
+    fun realToBuyLabel(unit: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Quantità reale da comprare ($unit) *"
+        AppLanguage.EN -> "Actual quantity to buy ($unit) *"
+    }
+
+    fun restoreOriginalQty(origStr: String, unit: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Ripristina originale ($origStr $unit)"
+        AppLanguage.EN -> "Restore original ($origStr $unit)"
+    }
+
+    fun purchasedCountLabel(purchased: Int, total: Int, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "$purchased di $total articoli acquistati"
+        AppLanguage.EN -> "$purchased of $total items purchased"
+    }
+
+    fun generationRangeTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Intervallo di Generazione"
+        AppLanguage.EN -> "Generation Range"
+    }
+
+    fun itemsToBuy(count: Int, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "$count da prendere"
+        AppLanguage.EN -> "$count to buy"
+    }
+
+    fun purchasedSectionTitle(count: Int, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Articoli già presi ($count)"
+        AppLanguage.EN -> "Purchased items ($count)"
+    }
+
+    fun showLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Mostra"
+        AppLanguage.EN -> "Show"
+    }
+
+    fun hideLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nascondi"
+        AppLanguage.EN -> "Hide"
+    }
+
+    fun noFoodFoundTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nessun articolo trovato"
+        AppLanguage.EN -> "No items found"
+    }
+
+    fun noFoodFoundSubtitle(query: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nessun risultato per \"$query\""
+        AppLanguage.EN -> "No results for \"$query\""
+    }
+
+    fun showAllItems(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Mostra tutti gli articoli"
+        AppLanguage.EN -> "Show all items"
+    }
+
+    fun dialogShareListTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Condividi Lista della Spesa"
+        AppLanguage.EN -> "Share Shopping List"
+    }
+
+    fun shareListExplanation(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Invia la lista organizzata per corsie di supermercato, oppure esporta il formato JSON strutturato per consentire l'unione con altre liste."
+        AppLanguage.EN -> "Send the list organized by grocery aisles, or export structured JSON format to allow merging with other lists."
+    }
+
+    fun tabOrganizedText(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Testo Organizzato"
+        AppLanguage.EN -> "Organized Text"
+    }
+
+    fun tabJsonFormat(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Formato JSON"
+        AppLanguage.EN -> "JSON Format"
+    }
+
+    fun copy(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Copia"
+        AppLanguage.EN -> "Copy"
+    }
+
+    fun dialogImportTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Importa / Unisci Lista"
+        AppLanguage.EN -> "Import / Merge List"
+    }
+
+    fun importExplanation(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Incolla il payload JSON della lista della spesa condivisa."
+        AppLanguage.EN -> "Paste the JSON payload of the shared shopping list."
+    }
+
+    fun importModeTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modalità di importazione:"
+        AppLanguage.EN -> "Import mode:"
+    }
+
+    fun importModeMerge(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Unisci alla lista esistente (somma le quantità)"
+        AppLanguage.EN -> "Merge into existing list (add quantities)"
+    }
+
+    fun importModeReplace(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Sostituisci interamente la lista attuale"
+        AppLanguage.EN -> "Completely replace current list"
+    }
+
+    fun importAction(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Importa"
+        AppLanguage.EN -> "Import"
+    }
+
+    fun adjustPantryExplanation(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Hai degli avanzi in frigo o in dispensa? Inserisci la quantità disponibile per calcolare quanto comprare effettivamente:"
+        AppLanguage.EN -> "Do you have leftovers in fridge or pantry? Enter available quantity to calculate how much to buy:"
+    }
+
+    fun saveQuantity(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Salva Quantità"
+        AppLanguage.EN -> "Save Quantity"
+    }
+
+    fun plannedVsPantryLabel(origStr: String, pantryStr: String, unit: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Pianificati: $origStr $unit • In dispensa: $pantryStr $unit"
+        AppLanguage.EN -> "Planned: $origStr $unit • In pantry: $pantryStr $unit"
+    }
+
+    fun extraFoodDialogExplanation(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Aggiungi articoli extra non presenti nei pasti (es. sapone per piatti, sacchetti frigo, sale...)"
+        AppLanguage.EN -> "Add extra items not in meals (e.g. dish soap, freezer bags, salt...)"
+    }
+
+    fun extraFoodNameLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nome articolo (es. Detersivo piatti)"
+        AppLanguage.EN -> "Item name (e.g. Dish soap)"
+    }
+
+    fun addExtraConfirm(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Aggiungi"
+        AppLanguage.EN -> "Add"
+    }
+
+    // --- Gestione Piani (MealPlansManagementScreen) ---
+    fun myPlansTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "I Miei Piani Alimentari"
+        AppLanguage.EN -> "My Meal Plans"
+    }
+
+    fun myPlansSubtitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Gestisci i tuoi piani settimanali e crea nuove schede nutrizionali"
+        AppLanguage.EN -> "Manage your weekly plans and create nutrition schedules"
+    }
+
+    fun btnNewPlan(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nuovo Piano"
+        AppLanguage.EN -> "New Plan"
+    }
+
+    fun createdOn(dateStr: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Creato il: $dateStr"
+        AppLanguage.EN -> "Created on: $dateStr"
+    }
+
+    fun btnSetActive(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Imposta come Attivo"
+        AppLanguage.EN -> "Set as Active"
+    }
+
+    fun btnEdit(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modifica"
+        AppLanguage.EN -> "Edit"
+    }
+
+    fun btnDelete(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Elimina"
+        AppLanguage.EN -> "Delete"
+    }
+
+    fun dialogNewPlanTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Crea Nuovo Piano"
+        AppLanguage.EN -> "Create New Plan"
+    }
+
+    fun planNameInputLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nome del Piano * (es. Dieta Definizione)"
+        AppLanguage.EN -> "Plan Name * (e.g. Definition Diet)"
+    }
+
+    fun planNotesInputLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Note o Obiettivi (opzionale)"
+        AppLanguage.EN -> "Notes or Goals (optional)"
+    }
+
+    fun setActiveCheckboxLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Imposta come piano attivo"
+        AppLanguage.EN -> "Set as active plan"
+    }
+
+    fun btnCreatePlan(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Crea Piano"
+        AppLanguage.EN -> "Create Plan"
+    }
+
+    fun dialogDeletePlanTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Eliminare il piano?"
+        AppLanguage.EN -> "Delete this plan?"
+    }
+
+    fun dialogDeletePlanMessage(title: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Sei sicuro di voler eliminare '$title'? Questa operazione non può essere annullata."
+        AppLanguage.EN -> "Are you sure you want to delete '$title'? This operation cannot be undone."
+    }
+
+    // --- Editor Piano (PlanEditorScreen) ---
+    fun editPlanHeaderTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modifica Piano"
+        AppLanguage.EN -> "Edit Plan"
+    }
+
+    fun unsavedChangesTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modifiche non salvate"
+        AppLanguage.EN -> "Unsaved Changes"
+    }
+
+    fun unsavedChangesMessage(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Ci sono modifiche non salvate al piano alimentare. Cosa desideri fare?"
+        AppLanguage.EN -> "There are unsaved changes to the meal plan. What would you like to do?"
+    }
+
+    fun saveAndExit(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Sì, salva ed esci"
+        AppLanguage.EN -> "Yes, save and exit"
+    }
+
+    fun exitWithoutSaving(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Esci senza salvare"
+        AppLanguage.EN -> "Exit without saving"
+    }
+
+    fun addFoodToSectionBtn(mealName: String, lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "+ Aggiungi alimento a $mealName"
+        AppLanguage.EN -> "+ Add food to $mealName"
+    }
+
+    fun modalCopyFoodTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Copia Alimento in Altri Pasti"
+        AppLanguage.EN -> "Copy Food to Other Meals"
+    }
+
+    fun selectTargetDaysLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Seleziona i giorni di destinazione:"
+        AppLanguage.EN -> "Select target days:"
+    }
+
+    fun selectTargetMealsLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Seleziona i pasti di destinazione:"
+        AppLanguage.EN -> "Select target meals:"
+    }
+
+    fun confirmCopyBtn(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Conferma Copia"
+        AppLanguage.EN -> "Confirm Copy"
+    }
+
+    // --- Traduzione Dinamica Piani e Alimenti Dimostrativi Predefiniti ---
+    fun translatePlanTitle(title: String, lang: AppLanguage): String {
+        if (lang == AppLanguage.IT) return title
+        return when {
+            title.contains("Piano Benessere Mediterraneo", ignoreCase = true) ->
+                title.replace("Piano Benessere Mediterraneo", "Mediterranean Wellness Plan", ignoreCase = true)
+            title.contains("Piano Definizione", ignoreCase = true) ->
+                title.replace("Piano Definizione", "Definition Meal Plan", ignoreCase = true)
+            else -> title
         }
     }
+
+    fun translatePlanNotes(notes: String?, lang: AppLanguage): String? {
+        if (notes == null || lang == AppLanguage.IT) return notes
+        return when {
+            notes.contains("Dieta bilanciata ricca di verdure, pesce, cereali integrali e frutta di stagione.", ignoreCase = true) ->
+                "Balanced diet rich in vegetables, fish, whole grains and seasonal fruits."
+            else -> notes
+        }
+    }
+
+    fun translateFoodName(name: String, lang: AppLanguage): String {
+        if (lang == AppLanguage.IT) return name
+        return when (name.trim()) {
+            "Yogurt Greco 0%" -> "Greek Yogurt 0%"
+            "Fiocchi d'Avena Integrale" -> "Whole Rolled Oats"
+            "Mela" -> "Apple"
+            "Noci sgusciate" -> "Shelled Walnuts"
+            "Riso Basmati Integrale", "Riso Integrale" -> "Brown Basmati Rice"
+            "Petto di Pollo ai Ferri", "Pollo ai Ferri" -> "Grilled Chicken Breast"
+            "Olio Extravergine d'Oliva" -> "Extra Virgin Olive Oil"
+            "Pane di Segale" -> "Rye Bread"
+            "Bresaola della Valtellina", "Bresaola" -> "Bresaola (Air-Dried Beef)"
+            "Trancio di Salmone al Forno", "Trancio di Salmone" -> "Baked Salmon Fillet"
+            "Broccoli al Vapore" -> "Steamed Broccoli"
+            "Banana" -> "Banana"
+            "Fesa di Tacchino" -> "Turkey Breast Slices"
+            "Mandorle" -> "Almonds"
+            "Tonno al naturale", "Tonno Naturale" -> "Canned Tuna in Brine"
+            "Insalata Mista" -> "Mixed Salad"
+            "Pomodori Pachino", "Pomodori" -> "Cherry Tomatoes"
+            "Uova sode", "Uova Intere", "Uova" -> "Boiled Eggs"
+            "Pasta Integrale" -> "Whole Wheat Pasta"
+            "Merluzzo al Vapore", "Merluzzo" -> "Steamed Cod"
+            "Zucchine Grigliate", "Zucchine" -> "Grilled Zucchini"
+            "Ricotta Vaccina", "Ricotta" -> "Ricotta Cheese"
+            else -> name
+        }
+    }
+
+    fun mealTypeName(type: MealType, lang: AppLanguage): String = type.getLocalizedName(lang)
 
     fun dayName(day: Int, lang: AppLanguage): String = when (lang) {
         AppLanguage.IT -> when (day) {

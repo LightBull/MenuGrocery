@@ -55,9 +55,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.model.AppLanguage
 import com.example.data.model.FoodItemModel
 import com.example.data.model.MealType
 import com.example.data.model.QuantityUnit
+import com.example.ui.i18n.AppStrings
 import com.example.ui.theme.CartaDaZucchero
 import com.example.ui.theme.SagePrimary
 
@@ -70,6 +72,7 @@ fun AddFoodModalBottomSheet(
     searchResults: List<FoodItemModel>,
     isSearching: Boolean,
     onSearchQueryChanged: (String) -> Unit,
+    lang: AppLanguage = AppLanguage.IT,
     onConfirmAdd: (
         mealId: String,
         name: String,
@@ -115,13 +118,13 @@ fun AddFoodModalBottomSheet(
                 .verticalScroll(rememberScrollState())
         ) {
             Text(
-                text = "Aggiungi a ${targetMealType.displayName}",
+                text = AppStrings.addFoodToMeal(lang, targetMealType.getLocalizedName(lang)),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Text(
-                text = "Cerca un alimento o inserisci i dati manualmente",
+                text = AppStrings.searchFoodHint(lang),
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.8f)
             )
@@ -139,9 +142,9 @@ fun AddFoodModalBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("food_search_input"),
-                label = { Text("Cerca Alimento") },
+                label = { Text(AppStrings.searchFoodPlaceholder(lang)) },
                 leadingIcon = {
-                    Icon(imageVector = Icons.Default.Search, contentDescription = "Cerca")
+                    Icon(imageVector = Icons.Default.Search, contentDescription = AppStrings.searchFoodPlaceholder(lang))
                 },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -150,7 +153,7 @@ fun AddFoodModalBottomSheet(
                             showAllResults = false
                             onSearchQueryChanged("")
                         }) {
-                            Icon(imageVector = Icons.Default.Clear, contentDescription = "Cancella")
+                            Icon(imageVector = Icons.Default.Clear, contentDescription = AppStrings.cancel(lang))
                         }
                     }
                 },
@@ -169,7 +172,11 @@ fun AddFoodModalBottomSheet(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cerca Alimento in corso...", fontSize = 12.sp, color = Color.White)
+                    Text(
+                        "${AppStrings.searchFoodPlaceholder(lang)}...",
+                        fontSize = 12.sp,
+                        color = Color.White
+                    )
                 }
             } else if (searchResults.isNotEmpty()) {
                 Surface(
@@ -185,7 +192,7 @@ fun AddFoodModalBottomSheet(
                             .padding(8.dp)
                     ) {
                         Text(
-                            text = "Tocca per selezionare:",
+                            text = AppStrings.tapToSelect(lang),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -227,7 +234,11 @@ fun AddFoodModalBottomSheet(
                                             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                         )
                                     }
-                                    val srcDesc = if (result.source == "Local") "Archivio locale (già usato)" else "Database alimenti (FoodDb)"
+                                    val srcDesc = if (result.source == "Local") {
+                                        AppStrings.sourceLocalLabel(lang)
+                                    } else {
+                                        AppStrings.sourceFoodDbLabel(lang)
+                                    }
                                     val brandText = if (!result.brand.isNullOrBlank()) "${result.brand} • " else ""
                                     Text(
                                         text = "$brandText$srcDesc • ${result.calories.toInt()} kcal/100g",
@@ -247,7 +258,7 @@ fun AddFoodModalBottomSheet(
                                     .testTag("btn_toggle_expand_results_sheet")
                             ) {
                                 Text(
-                                    text = if (showAllResults) "Mostra meno" else "Visualizza tutti (${searchResults.size})",
+                                    text = if (showAllResults) AppStrings.showLess(lang) else AppStrings.showAll(lang, searchResults.size),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -267,19 +278,19 @@ fun AddFoodModalBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("food_name_input"),
-                label = { Text("Nome Alimento *") },
+                label = { Text("${AppStrings.foodNameLabel(lang)} *") },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Marca (opzionale)
+            // Marca / Categoria (opzionale)
             OutlinedTextField(
                 value = brand,
                 onValueChange = { brand = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Marca (opzionale)") },
+                label = { Text(AppStrings.brandCategoryLabel(lang)) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp)
             )
@@ -298,7 +309,7 @@ fun AddFoodModalBottomSheet(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quantity_input"),
-                    label = { Text("Quantità *") },
+                    label = { Text("${AppStrings.quantityLabel(lang)} *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp)
@@ -308,13 +319,13 @@ fun AddFoodModalBottomSheet(
                     FilterChip(
                         selected = selectedUnit == QuantityUnit.GRAMS,
                         onClick = { selectedUnit = QuantityUnit.GRAMS },
-                        label = { Text("Grammi (g)") },
+                        label = { Text(QuantityUnit.GRAMS.getLocalizedName(lang)) },
                         modifier = Modifier.testTag("chip_unit_grams")
                     )
                     FilterChip(
                         selected = selectedUnit == QuantityUnit.PIECES,
                         onClick = { selectedUnit = QuantityUnit.PIECES },
-                        label = { Text("Pezzi (pz)") },
+                        label = { Text(QuantityUnit.PIECES.getLocalizedName(lang)) },
                         modifier = Modifier.testTag("chip_unit_pieces")
                     )
                 }
@@ -342,19 +353,19 @@ fun AddFoodModalBottomSheet(
                     ) {
                         Icon(
                             imageVector = Icons.Default.AcUnit,
-                            contentDescription = "Scongelamento",
+                            contentDescription = AppStrings.defrostReminderLabel(lang),
                             tint = CartaDaZucchero,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "Da scongelare",
+                                text = AppStrings.defrostReminderLabel(lang),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
                             Text(
-                                text = "Notifica automatica alle 20:00 della sera precedente",
+                                text = AppStrings.defrostReminderSubtitle(lang),
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
                             )
@@ -397,9 +408,9 @@ fun AddFoodModalBottomSheet(
                         horizontalArrangement = Arrangement.SpaceAround
                     ) {
                         Text("${calcCal.toInt()} kcal", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("Prot: ${calcProt.toInt()}g", fontSize = 12.sp)
-                        Text("Carb: ${calcCarb.toInt()}g", fontSize = 12.sp)
-                        Text("Gras: ${calcFat.toInt()}g", fontSize = 12.sp)
+                        Text("${AppStrings.proteinAbbrev(lang)}: ${calcProt.toInt()}g", fontSize = 12.sp)
+                        Text("${AppStrings.carbsAbbrev(lang)}: ${calcCarb.toInt()}g", fontSize = 12.sp)
+                        Text("${AppStrings.fatAbbrev(lang)}: ${calcFat.toInt()}g", fontSize = 12.sp)
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
@@ -440,7 +451,7 @@ fun AddFoodModalBottomSheet(
                 )
             ) {
                 Text(
-                    text = "Aggiungi a ${targetMealType.displayName}",
+                    text = AppStrings.addFoodToMeal(lang, targetMealType.getLocalizedName(lang)),
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp
                 )

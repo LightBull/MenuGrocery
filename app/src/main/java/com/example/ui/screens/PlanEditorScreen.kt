@@ -126,6 +126,7 @@ fun PlanEditorScreen(
     var showUnsavedDialog by remember { mutableStateOf(false) }
 
     val pendingNavigationTab by viewModel.pendingNavigationTab.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     // Sincronizza lo stato di modifiche non salvate con il ViewModel
     LaunchedEffect(isDirty) {
@@ -221,14 +222,14 @@ fun PlanEditorScreen(
             },
             title = {
                 Text(
-                    text = "Salvare le modifiche?",
+                    text = com.example.ui.i18n.AppStrings.unsavedChangesTitle(currentLanguage),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "Ci sono modifiche non salvate al piano alimentare. Si desidera salvare prima di uscire?",
+                    text = com.example.ui.i18n.AppStrings.unsavedChangesMessage(currentLanguage),
                     style = MaterialTheme.typography.bodyMedium
                 )
             },
@@ -269,7 +270,7 @@ fun PlanEditorScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
                     modifier = Modifier.testTag("btn_unsaved_save_and_exit")
                 ) {
-                    Text("Sì, salva ed esci", fontWeight = FontWeight.Bold)
+                    Text(com.example.ui.i18n.AppStrings.saveAndExit(currentLanguage), fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -281,7 +282,7 @@ fun PlanEditorScreen(
                         },
                         modifier = Modifier.testTag("btn_unsaved_cancel")
                     ) {
-                        Text("Annulla")
+                        Text(com.example.ui.i18n.AppStrings.cancel(currentLanguage))
                     }
                     TextButton(
                         onClick = {
@@ -298,7 +299,7 @@ fun PlanEditorScreen(
                         },
                         modifier = Modifier.testTag("btn_unsaved_discard")
                     ) {
-                        Text("Esci senza salvare", color = TerracottaAccent)
+                        Text(com.example.ui.i18n.AppStrings.exitWithoutSaving(currentLanguage), color = TerracottaAccent)
                     }
                 }
             }
@@ -307,7 +308,7 @@ fun PlanEditorScreen(
 
     // Dialog Copia Intero Giorno
     if (showCopyDayDialog) {
-        val currentDayName = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }?.fullName ?: "Giorno $selectedDay"
+        val currentDayName = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }?.getLocalizedFullName(currentLanguage) ?: "Giorno $selectedDay"
         val currentDayMeals = daysMealsMap[selectedDay] ?: emptyList()
         val totalFoodItemsInDay = currentDayMeals.sumOf { it.items.size }
 
@@ -315,6 +316,7 @@ fun PlanEditorScreen(
             sourceDayIndex = selectedDay,
             sourceDayName = currentDayName,
             totalItemsCount = totalFoodItemsInDay,
+            lang = currentLanguage,
             onDismiss = { showCopyDayDialog = false },
             onConfirmCopy = { targetDays ->
                 showCopyDayDialog = false
@@ -349,7 +351,11 @@ fun PlanEditorScreen(
                     }
                     isDirty = true
                     viewModel.setEditorDirty(true)
-                    viewModel.postFeedbackMessage("Giorno $currentDayName copiato con successo su ${targetDays.size} giorno/i!")
+                    val feedback = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                        "Giorno $currentDayName copiato con successo su ${targetDays.size} giorno/i!"
+                    else
+                        "Day $currentDayName successfully copied to ${targetDays.size} day(s)!"
+                    viewModel.postFeedbackMessage(feedback)
                 }
             }
         )
@@ -357,12 +363,13 @@ fun PlanEditorScreen(
 
     // Dialog Copia Intero Pasto
     copyingMealTarget?.let { mealTarget ->
-        val currentDayName = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }?.fullName ?: "Giorno $selectedDay"
+        val currentDayName = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }?.getLocalizedFullName(currentLanguage) ?: "Giorno $selectedDay"
         CopyMealDialog(
-            mealName = mealTarget.mealType.displayName,
+            mealName = mealTarget.mealType.getLocalizedName(currentLanguage),
             dayName = currentDayName,
             totalItemsCount = mealTarget.items.size,
             initialMealType = mealTarget.mealType,
+            lang = currentLanguage,
             onDismiss = { copyingMealTarget = null },
             onConfirmCopy = { targetDays, targetMealTypes ->
                 copyingMealTarget = null
@@ -395,7 +402,11 @@ fun PlanEditorScreen(
                     }
                     isDirty = true
                     viewModel.setEditorDirty(true)
-                    viewModel.postFeedbackMessage("${mealTarget.mealType.displayName} copiato con successo!")
+                    val feedback = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                        "${mealTarget.mealType.getLocalizedName(currentLanguage)} copiato con successo!"
+                    else
+                        "${mealTarget.mealType.getLocalizedName(currentLanguage)} successfully copied!"
+                    viewModel.postFeedbackMessage(feedback)
                 }
             }
         )
@@ -406,14 +417,14 @@ fun PlanEditorScreen(
         TopAppBar(
             title = {
                 Text(
-                    text = if (planId != null) "Modifica Piano" else "Nuovo Piano",
+                    text = if (planId != null) com.example.ui.i18n.AppStrings.editPlanHeaderTitle(currentLanguage) else com.example.ui.i18n.AppStrings.btnNewPlan(currentLanguage),
                     fontWeight = FontWeight.Bold,
                     fontSize = 18.sp
                 )
             },
             navigationIcon = {
                 IconButton(onClick = { handleBackAttempt() }) {
-                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro")
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.example.ui.i18n.AppStrings.back(currentLanguage))
                 }
             },
             actions = {
@@ -442,7 +453,7 @@ fun PlanEditorScreen(
                 ) {
                     Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Salva", fontWeight = FontWeight.Bold)
+                    Text(com.example.ui.i18n.AppStrings.save(currentLanguage), fontWeight = FontWeight.Bold)
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -478,7 +489,7 @@ fun PlanEditorScreen(
                                 planTitle = it
                                 isDirty = true
                             },
-                            label = { Text("Nome del Piano * (es. Dieta Definizione)") },
+                            label = { Text(com.example.ui.i18n.AppStrings.planNameInputLabel(currentLanguage)) },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("input_editor_plan_title"),
@@ -494,7 +505,7 @@ fun PlanEditorScreen(
                                 planNotes = it
                                 isDirty = true
                             },
-                            label = { Text("Note o Obiettivi (opzionale)") },
+                            label = { Text(com.example.ui.i18n.AppStrings.planNotesInputLabel(currentLanguage)) },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
                             maxLines = 2
@@ -508,7 +519,7 @@ fun PlanEditorScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             Text(
-                                text = "Imposta subito come piano Attivo",
+                                text = com.example.ui.i18n.AppStrings.setActiveCheckboxLabel(currentLanguage),
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -536,7 +547,8 @@ fun PlanEditorScreen(
                         onDaySelected = {
                             selectedDay = it
                             inlineAddMealType = null // Chiudi eventuale form inline
-                        }
+                        },
+                        lang = currentLanguage
                     )
 
                     val currentDayInfo = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }
@@ -550,8 +562,10 @@ fun PlanEditorScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        val dayFullName = currentDayInfo?.getLocalizedFullName(currentLanguage) ?: "Giorno"
+                        val foodsLabel = if (currentLanguage == com.example.data.model.AppLanguage.IT) "alimenti" else "foods"
                         Text(
-                            text = "${currentDayInfo?.fullName ?: "Giorno"} • $totalFoodsInDay alimenti",
+                            text = "$dayFullName • $totalFoodsInDay $foodsLabel",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -572,7 +586,7 @@ fun PlanEditorScreen(
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Text(
-                                text = "Copia Giorno",
+                                text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
@@ -619,12 +633,13 @@ fun PlanEditorScreen(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column {
                                     Text(
-                                        text = mealWithItems.mealType.displayName,
+                                        text = mealWithItems.mealType.getLocalizedName(currentLanguage),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp
                                     )
+                                    val countSuffix = if (currentLanguage == com.example.data.model.AppLanguage.IT) "alimenti configurati" else "configured foods"
                                     Text(
-                                        text = "${mealWithItems.items.size} alimenti configurati",
+                                        text = "${mealWithItems.items.size} $countSuffix",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant
                                     )
@@ -644,7 +659,7 @@ fun PlanEditorScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.ContentCopy,
-                                        contentDescription = "Copia intero pasto",
+                                        contentDescription = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia intero pasto" else "Copy entire meal",
                                         tint = if (mealWithItems.items.isNotEmpty()) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f),
                                         modifier = Modifier.size(18.dp)
                                     )
@@ -665,7 +680,7 @@ fun PlanEditorScreen(
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
                                     Text(
-                                        text = if (inlineAddMealType == mealWithItems.mealType) "Chiudi" else "Aggiungi",
+                                        text = if (inlineAddMealType == mealWithItems.mealType) com.example.ui.i18n.AppStrings.close(currentLanguage) else com.example.ui.i18n.AppStrings.addExtraConfirm(currentLanguage),
                                         fontSize = 12.sp
                                     )
                                 }
@@ -677,6 +692,7 @@ fun PlanEditorScreen(
                             Spacer(modifier = Modifier.height(10.dp))
                             ReorderableMealFoodList(
                                 items = mealWithItems.items,
+                                lang = currentLanguage,
                                 onReorder = { fromIdx, toIdx ->
                                     val mutableList = mealWithItems.items.toMutableList()
                                     val movedItem = mutableList.removeAt(fromIdx)
@@ -714,6 +730,7 @@ fun PlanEditorScreen(
                                     mealType = mealWithItems.mealType,
                                     searchResults = searchResults,
                                     isSearching = isSearching,
+                                    lang = currentLanguage,
                                     onSearchQueryChanged = { viewModel.onSearchQueryChanged(it) },
                                     onConfirmAdd = { newItem ->
                                         val updatedList = mealWithItems.items + newItem
@@ -741,6 +758,7 @@ fun PlanEditorScreen(
         editingFoodTarget?.let { (day, mealType, foodItem) ->
             EditFoodItemDialog(
                 foodItem = foodItem,
+                lang = currentLanguage,
                 onDismiss = { editingFoodTarget = null },
                 onConfirm = { updatedFood ->
                     val dayMeals = daysMealsMap[day] ?: emptyList()
@@ -762,6 +780,7 @@ fun PlanEditorScreen(
         copyingFoodTarget?.let { foodItemToCopy ->
             CopyFoodItemDialog(
                 foodName = foodItemToCopy.name,
+                lang = currentLanguage,
                 onDismiss = { copyingFoodTarget = null },
                 onConfirmCopy = { targetDays, targetMealTypes ->
                     for (targetDay in targetDays) {
@@ -795,6 +814,7 @@ fun PlanEditorScreen(
 @Composable
 fun ReorderableMealFoodList(
     items: List<FoodItemModel>,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onReorder: (fromIndex: Int, toIndex: Int) -> Unit,
     onEdit: (FoodItemModel) -> Unit,
     onCopy: (FoodItemModel) -> Unit,
@@ -808,6 +828,7 @@ fun ReorderableMealFoodList(
         items.forEachIndexed { index, foodItem ->
             InlineFoodItemRow(
                 item = foodItem,
+                lang = lang,
                 canMoveUp = index > 0,
                 canMoveDown = index < items.lastIndex,
                 onMoveUp = { onReorder(index, index - 1) },
@@ -824,6 +845,7 @@ fun ReorderableMealFoodList(
 @Composable
 fun InlineFoodItemRow(
     item: FoodItemModel,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     canMoveUp: Boolean = false,
     canMoveDown: Boolean = false,
     onMoveUp: () -> Unit = {},
@@ -864,7 +886,7 @@ fun InlineFoodItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = "Sposta su",
+                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta su" else "Move up",
                         tint = if (canMoveUp) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -878,7 +900,7 @@ fun InlineFoodItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = "Sposta giù",
+                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta giù" else "Move down",
                         tint = if (canMoveDown) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -889,13 +911,13 @@ fun InlineFoodItemRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else String.format("%.1f", item.quantity)
                     Text(
-                        text = item.name,
+                        text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "($qtyStr ${item.unit.shortName})",
+                        text = "($qtyStr ${item.unit.getLocalizedShortName(lang)})",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -911,7 +933,7 @@ fun InlineFoodItemRow(
 
                     val category = FoodCategory.fromCategoryString(item.category) ?: FoodCategory.categorize(item.name)
                     Text(
-                        text = "${category.iconEmoji} ${category.displayName}",
+                        text = "${category.iconEmoji} ${category.getLocalizedName(lang)}",
                         fontSize = 10.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -931,7 +953,7 @@ fun InlineFoodItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.ContentCopy,
-                        contentDescription = "Copia alimento",
+                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Copia alimento" else "Copy food",
                         tint = SagePrimary,
                         modifier = Modifier.size(17.dp)
                     )
@@ -945,7 +967,7 @@ fun InlineFoodItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.Edit,
-                        contentDescription = "Modifica",
+                        contentDescription = com.example.ui.i18n.AppStrings.btnEdit(lang),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
@@ -959,7 +981,7 @@ fun InlineFoodItemRow(
                 ) {
                     Icon(
                         imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = "Rimuovi",
+                        contentDescription = com.example.ui.i18n.AppStrings.deleteFood(lang),
                         tint = TerracottaAccent,
                         modifier = Modifier.size(18.dp)
                     )
@@ -976,6 +998,7 @@ fun InlineFoodItemRow(
 @Composable
 fun EditFoodItemDialog(
     foodItem: FoodItemModel,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onDismiss: () -> Unit,
     onConfirm: (FoodItemModel) -> Unit
 ) {
@@ -1012,12 +1035,12 @@ fun EditFoodItemDialog(
                 )
                 Column {
                     Text(
-                        text = "Modifica Alimento",
+                        text = com.example.ui.i18n.AppStrings.editFoodTitle(lang),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = foodItem.name,
+                        text = com.example.ui.i18n.AppStrings.translateFoodName(foodItem.name, lang),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -1034,13 +1057,14 @@ fun EditFoodItemDialog(
                 // Selezione Categoria (Corsia Spesa)
                 CategorySelectorDropdown(
                     selectedCategory = selectedCategory,
-                    onCategorySelected = { selectedCategory = it }
+                    onCategorySelected = { selectedCategory = it },
+                    lang = lang
                 )
 
                 // Selezione Unità di Misura
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Unità di misura",
+                        text = com.example.ui.i18n.AppStrings.unitLabel(lang),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1052,7 +1076,7 @@ fun EditFoodItemDialog(
                             FilterChip(
                                 selected = selectedUnit == unit,
                                 onClick = { selectedUnit = unit },
-                                label = { Text(unit.displayName, fontSize = 12.sp) },
+                                label = { Text(unit.getLocalizedName(lang), fontSize = 12.sp) },
                                 leadingIcon = if (selectedUnit == unit) {
                                     {
                                         Icon(
@@ -1070,7 +1094,7 @@ fun EditFoodItemDialog(
                 // Campo Quantità e Stepper rapidi (+ / -)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Quantità (${selectedUnit.shortName})",
+                        text = "${com.example.ui.i18n.AppStrings.quantityLabel(lang)} (${selectedUnit.getLocalizedShortName(lang)})",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1084,7 +1108,7 @@ fun EditFoodItemDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         trailingIcon = {
                             Text(
-                                text = selectedUnit.shortName,
+                                text = selectedUnit.getLocalizedShortName(lang),
                                 modifier = Modifier.padding(end = 12.dp),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -1126,19 +1150,20 @@ fun EditFoodItemDialog(
                                 Text("+50g", fontSize = 11.sp)
                             }
                         } else {
+                            val pcsShort = QuantityUnit.PIECES.getLocalizedShortName(lang)
                             OutlinedButton(
                                 onClick = { adjustQuantity(-1.0) },
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                             ) {
-                                Text("-1 pz", fontSize = 12.sp)
+                                Text("-1 $pcsShort", fontSize = 12.sp)
                             }
                             OutlinedButton(
                                 onClick = { adjustQuantity(1.0) },
                                 modifier = Modifier.weight(1f),
                                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
                             ) {
-                                Text("+1 pz", fontSize = 12.sp)
+                                Text("+1 $pcsShort", fontSize = 12.sp)
                             }
                         }
                     }
@@ -1169,12 +1194,12 @@ fun EditFoodItemDialog(
                             )
                             Column {
                                 Text(
-                                    text = "Da scongelare",
+                                    text = com.example.ui.i18n.AppStrings.defrostReminderLabel(lang),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium
                                 )
                                 Text(
-                                    text = "Mostra avviso promemoria",
+                                    text = com.example.ui.i18n.AppStrings.defrostReminderSubtitle(lang),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -1209,7 +1234,7 @@ fun EditFoodItemDialog(
                 },
                 modifier = Modifier.testTag("btn_save_edit_food")
             ) {
-                Text("Salva modifiche")
+                Text(com.example.ui.i18n.AppStrings.saveChanges(lang))
             }
         },
 
@@ -1218,7 +1243,7 @@ fun EditFoodItemDialog(
                 onClick = onDismiss,
                 modifier = Modifier.testTag("btn_cancel_edit_food")
             ) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )
@@ -1233,6 +1258,7 @@ fun InlineAddFoodForm(
     mealType: MealType,
     searchResults: List<FoodItemModel>,
     isSearching: Boolean,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onSearchQueryChanged: (String) -> Unit,
     onConfirmAdd: (FoodItemModel) -> Unit,
     onCancel: () -> Unit
@@ -1259,8 +1285,9 @@ fun InlineAddFoodForm(
         color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.2f)
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
+            val titlePrefix = if (lang == com.example.data.model.AppLanguage.IT) "Nuovo alimento per" else "New food for"
             Text(
-                text = "Nuovo alimento per ${mealType.displayName}",
+                text = "$titlePrefix ${mealType.getLocalizedName(lang)}",
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.primary
@@ -1279,7 +1306,7 @@ fun InlineAddFoodForm(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("inline_search_input"),
-                label = { Text("Cerca Alimento") },
+                label = { Text(com.example.ui.i18n.AppStrings.searchFoodPlaceholder(lang)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
                 trailingIcon = {
                     if (searchQuery.isNotEmpty()) {
@@ -1307,7 +1334,7 @@ fun InlineAddFoodForm(
                 ) {
                     CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Cerca Alimento...", fontSize = 11.sp, color = Color.White)
+                    Text("${com.example.ui.i18n.AppStrings.searchFoodPlaceholder(lang)}...", fontSize = 11.sp, color = Color.White)
                 }
             } else if (searchResults.isNotEmpty()) {
                 Surface(
@@ -1326,7 +1353,7 @@ fun InlineAddFoodForm(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Tocca per selezionare:",
+                                text = com.example.ui.i18n.AppStrings.tapToSelect(lang),
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White
@@ -1334,7 +1361,7 @@ fun InlineAddFoodForm(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 FoodSourceDot(source = "Local")
                                 Spacer(modifier = Modifier.width(3.dp))
-                                Text("Locale", fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
+                                Text(if (lang == com.example.data.model.AppLanguage.IT) "Locale" else "Local", fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
                                 Spacer(modifier = Modifier.width(8.dp))
                                 FoodSourceDot(source = "FoodDb")
                                 Spacer(modifier = Modifier.width(3.dp))
@@ -1365,7 +1392,7 @@ fun InlineAddFoodForm(
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
-                                        text = item.name,
+                                        text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Medium,
                                         color = Color.White
@@ -1378,7 +1405,9 @@ fun InlineAddFoodForm(
                                             fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                                         )
                                     }
-                                    val sourceText = if (item.source == "Local") "Archivio interno" else "FoodDb"
+                                    val sourceText = if (item.source == "Local") {
+                                        if (lang == com.example.data.model.AppLanguage.IT) "Archivio interno" else "Internal archive"
+                                    } else "FoodDb"
                                     val brandText = if (!item.brand.isNullOrBlank()) "${item.brand} • " else ""
                                     Text(
                                         text = "$brandText$sourceText • ${item.calories.toInt()} kcal/100g",
@@ -1398,7 +1427,7 @@ fun InlineAddFoodForm(
                                     .testTag("btn_toggle_expand_results")
                             ) {
                                 Text(
-                                    text = if (showAllResults) "Mostra meno" else "Visualizza tutti (${searchResults.size})",
+                                    text = if (showAllResults) com.example.ui.i18n.AppStrings.showLess(lang) else com.example.ui.i18n.AppStrings.showAll(lang, searchResults.size),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -1420,7 +1449,7 @@ fun InlineAddFoodForm(
                         selectedCategory = FoodCategory.categorize(it)
                     }
                 },
-                label = { Text("Nome alimento *") },
+                label = { Text("${com.example.ui.i18n.AppStrings.foodNameLabel(lang)} *") },
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("inline_food_name"),
@@ -1433,7 +1462,8 @@ fun InlineAddFoodForm(
             // Selettore Categoria Alimento (Corsia Supermercato)
             CategorySelectorDropdown(
                 selectedCategory = selectedCategory,
-                onCategorySelected = { selectedCategory = it }
+                onCategorySelected = { selectedCategory = it },
+                lang = lang
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -1447,7 +1477,7 @@ fun InlineAddFoodForm(
                 OutlinedTextField(
                     value = quantityInput,
                     onValueChange = { quantityInput = it },
-                    label = { Text("Quantità *") },
+                    label = { Text("${com.example.ui.i18n.AppStrings.quantityLabel(lang)} *") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     singleLine = true,
@@ -1457,13 +1487,13 @@ fun InlineAddFoodForm(
                 FilterChip(
                     selected = selectedUnit == QuantityUnit.GRAMS,
                     onClick = { selectedUnit = QuantityUnit.GRAMS },
-                    label = { Text("Grammi (g)", fontSize = 11.sp) }
+                    label = { Text("${QuantityUnit.GRAMS.getLocalizedName(lang)} (${QuantityUnit.GRAMS.getLocalizedShortName(lang)})", fontSize = 11.sp) }
                 )
 
                 FilterChip(
                     selected = selectedUnit == QuantityUnit.PIECES,
                     onClick = { selectedUnit = QuantityUnit.PIECES },
-                    label = { Text("Pezzi (pz)", fontSize = 11.sp) }
+                    label = { Text("${QuantityUnit.PIECES.getLocalizedName(lang)} (${QuantityUnit.PIECES.getLocalizedShortName(lang)})", fontSize = 11.sp) }
                 )
             }
 
@@ -1483,7 +1513,10 @@ fun InlineAddFoodForm(
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text("Da scongelare la sera prima (ore 20:00)", fontSize = 12.sp)
+                    Text(
+                        text = if (lang == com.example.data.model.AppLanguage.IT) "Da scongelare la sera prima (ore 20:00)" else "Defrost the evening before (8:00 PM)",
+                        fontSize = 12.sp
+                    )
                 }
 
                 Switch(
@@ -1508,7 +1541,7 @@ fun InlineAddFoodForm(
                     shape = RoundedCornerShape(10.dp),
                     modifier = Modifier.padding(end = 8.dp)
                 ) {
-                    Text("Annulla", fontSize = 12.sp)
+                    Text(com.example.ui.i18n.AppStrings.cancel(lang), fontSize = 12.sp)
                 }
 
                 Button(
@@ -1537,7 +1570,7 @@ fun InlineAddFoodForm(
                     colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
                     modifier = Modifier.testTag("btn_inline_confirm_add")
                 ) {
-                    Text("Aggiungi al Pasto", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(com.example.ui.i18n.AppStrings.addFoodToMeal(lang, mealType.getLocalizedName(lang)), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

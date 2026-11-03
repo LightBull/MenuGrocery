@@ -387,7 +387,7 @@ fun SettingsScreen(
                             color = Color.White.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "6.0",
+                            text = com.example.BuildConfig.VERSION_NAME,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = SagePrimary

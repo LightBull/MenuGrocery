@@ -70,6 +70,7 @@ fun MealPlansManagementScreen(
 ) {
     val plans by viewModel.allPlans.collectAsState()
     val activePlan by viewModel.activePlan.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     // Stato per apertura dell'Editor a schermo intero:
     // null = mostra lista piani, oppure MealPlanEntity per modifica, o nuovo piano
@@ -124,13 +125,13 @@ fun MealPlansManagementScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            text = "Gestione Piani Alimentari",
+                            text = com.example.ui.i18n.AppStrings.myPlansTitle(currentLanguage),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Crea, personalizza e attiva i tuoi piani alimentari. I pasti giornalieri e la lista della spesa rifletteranno sempre il piano contrassegnato come attivo.",
+                            text = com.example.ui.i18n.AppStrings.myPlansSubtitle(currentLanguage),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -148,7 +149,7 @@ fun MealPlansManagementScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Diagnostica Scongelamento & Notifiche", fontSize = 13.sp)
+                            Text(com.example.ui.i18n.AppStrings.defrostDiagnostics(currentLanguage), fontSize = 13.sp)
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedButton(
@@ -164,7 +165,10 @@ fun MealPlansManagementScreen(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Ricrea Database (Versione Attuale)", fontSize = 13.sp)
+                            Text(
+                                if (currentLanguage == com.example.data.model.AppLanguage.IT) "Ricrea Database (Versione Attuale)" else "Recreate Database (Current Version)",
+                                fontSize = 13.sp
+                            )
                         }
                     }
                 }
@@ -175,6 +179,7 @@ fun MealPlansManagementScreen(
                 MealPlanCard(
                     plan = plan,
                     isActive = isActive,
+                    lang = currentLanguage,
                     canDelete = plans.size > 1 && !isActive,
                     onActivate = {
                         viewModel.activatePlan(plan.id)
@@ -204,15 +209,25 @@ fun MealPlansManagementScreen(
         ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Nuovo Piano", fontWeight = FontWeight.Bold)
+            Text(com.example.ui.i18n.AppStrings.btnNewPlan(currentLanguage), fontWeight = FontWeight.Bold)
         }
 
         if (showResetDbDialog) {
             AlertDialog(
                 onDismissRequest = { showResetDbDialog = false },
-                title = { Text("Ricreare il Database?", fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        if (currentLanguage == com.example.data.model.AppLanguage.IT) "Ricreare il Database?" else "Recreate Database?",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 text = {
-                    Text("Questa operazione eliminerà tutti i dati e ricreerà le tabelle secondo la versione attuale dello schema (versione 2 con gestione avanzata della spesa, calcolatore dispensa e categorie), ripopolando i pasti di prova predefiniti.")
+                    Text(
+                        if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                            "Questa operazione eliminerà tutti i dati e ricreerà le tabelle secondo la versione attuale dello schema, ripopolando i pasti di prova predefiniti."
+                        else
+                            "This will clear all data and recreate tables according to current schema version, restoring default meal plans."
+                    )
                 },
                 confirmButton = {
                     Button(
@@ -222,12 +237,15 @@ fun MealPlansManagementScreen(
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text("Distruggi e Ricrea", color = Color.White)
+                        Text(
+                            if (currentLanguage == com.example.data.model.AppLanguage.IT) "Distruggi e Ricrea" else "Clear and Recreate",
+                            color = Color.White
+                        )
                     }
                 },
                 dismissButton = {
                     TextButton(onClick = { showResetDbDialog = false }) {
-                        Text("Annulla")
+                        Text(com.example.ui.i18n.AppStrings.cancel(currentLanguage))
                     }
                 }
             )
@@ -246,6 +264,7 @@ fun MealPlansManagementScreen(
 fun MealPlanCard(
     plan: MealPlanEntity,
     isActive: Boolean,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     canDelete: Boolean,
     onActivate: () -> Unit,
     onEdit: () -> Unit,
@@ -286,7 +305,7 @@ fun MealPlanCard(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "PIANO ATTIVO",
+                                    text = com.example.ui.i18n.AppStrings.activePlanBadge(lang).uppercase(),
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -297,14 +316,14 @@ fun MealPlanCard(
                     }
 
                     Text(
-                        text = plan.title,
+                        text = com.example.ui.i18n.AppStrings.translatePlanTitle(plan.title, lang),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
 
                     val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(plan.createdAt))
                     Text(
-                        text = "Creato il $dateStr",
+                        text = com.example.ui.i18n.AppStrings.createdOn(dateStr, lang),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -317,7 +336,7 @@ fun MealPlanCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
-                            contentDescription = "Modifica pasti e piano",
+                            contentDescription = com.example.ui.i18n.AppStrings.btnEdit(lang),
                             tint = SagePrimary,
                             modifier = Modifier.size(20.dp)
                         )
@@ -329,7 +348,7 @@ fun MealPlanCard(
                     ) {
                         Icon(
                             imageVector = Icons.Default.ContentCopy,
-                            contentDescription = "Duplica piano",
+                            contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Duplica piano" else "Duplicate plan",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(18.dp)
                         )
@@ -342,7 +361,7 @@ fun MealPlanCard(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
-                                contentDescription = "Elimina piano",
+                                contentDescription = com.example.ui.i18n.AppStrings.btnDelete(lang),
                                 tint = TerracottaAccent,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -351,10 +370,11 @@ fun MealPlanCard(
                 }
             }
 
-            if (!plan.notes.isNullOrBlank()) {
+            val notes = com.example.ui.i18n.AppStrings.translatePlanNotes(plan.notes, lang)
+            if (!notes.isNullOrBlank()) {
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = plan.notes,
+                    text = notes,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -372,7 +392,7 @@ fun MealPlanCard(
                     shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
                 ) {
-                    Text("Imposta come Attivo", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    Text(com.example.ui.i18n.AppStrings.btnSetActive(lang), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
             } else {
                 Surface(
@@ -382,7 +402,7 @@ fun MealPlanCard(
                     color = SagePrimary.copy(alpha = 0.1f)
                 ) {
                     Text(
-                        text = "Questo piano governa i pasti attuali e la lista della spesa",
+                        text = if (lang == com.example.data.model.AppLanguage.IT) "Questo piano governa i pasti attuali e la lista della spesa" else "This plan governs current meals and the shopping list",
                         modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
                         fontSize = 11.sp,
                         color = SagePrimary,

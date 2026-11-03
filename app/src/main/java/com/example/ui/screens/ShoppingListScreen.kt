@@ -97,6 +97,7 @@ fun ShoppingListScreen(
     val items by viewModel.shoppingList.collectAsState()
     val selectedDays by viewModel.selectedShoppingDays.collectAsState()
     val activePlan by viewModel.activePlan.collectAsState()
+    val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     var showAddExtraDialog by remember { mutableStateOf(false) }
     var showShareDialog by remember { mutableStateOf(false) }
@@ -115,27 +116,29 @@ fun ShoppingListScreen(
     var collapsedCategories by remember { mutableStateOf(setOf<FoodCategory>()) }
     var isPurchasedSectionCollapsed by remember { mutableStateOf(false) }
 
-    val filteredUnpurchasedItems = remember(unpurchasedItems, searchQuery) {
+    val filteredUnpurchasedItems = remember(unpurchasedItems, searchQuery, currentLanguage) {
         if (searchQuery.isBlank()) unpurchasedItems
         else {
             val q = searchQuery.trim().lowercase()
             unpurchasedItems.filter {
                 it.name.lowercase().contains(q) ||
+                com.example.ui.i18n.AppStrings.translateFoodName(it.name, currentLanguage).lowercase().contains(q) ||
                 it.category.lowercase().contains(q) ||
-                FoodCategory.categorize(it.name, it.isManualExtra, it.category).displayName.lowercase().contains(q) ||
+                FoodCategory.categorize(it.name, it.isManualExtra, it.category).getLocalizedName(currentLanguage).lowercase().contains(q) ||
                 it.sourceDays.lowercase().contains(q)
             }
         }
     }
 
-    val filteredPurchasedItems = remember(purchasedItems, searchQuery) {
+    val filteredPurchasedItems = remember(purchasedItems, searchQuery, currentLanguage) {
         if (searchQuery.isBlank()) purchasedItems
         else {
             val q = searchQuery.trim().lowercase()
             purchasedItems.filter {
                 it.name.lowercase().contains(q) ||
+                com.example.ui.i18n.AppStrings.translateFoodName(it.name, currentLanguage).lowercase().contains(q) ||
                 it.category.lowercase().contains(q) ||
-                FoodCategory.categorize(it.name, it.isManualExtra, it.category).displayName.lowercase().contains(q) ||
+                FoodCategory.categorize(it.name, it.isManualExtra, it.category).getLocalizedName(currentLanguage).lowercase().contains(q) ||
                 it.sourceDays.lowercase().contains(q)
             }
         }
@@ -174,13 +177,13 @@ fun ShoppingListScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Lista della Spesa",
+                                    text = com.example.ui.i18n.AppStrings.shoppingListTitle(currentLanguage),
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
                                 )
                                 Text(
-                                    text = "$purchasedCount di $totalCount articoli acquistati",
+                                    text = com.example.ui.i18n.AppStrings.purchasedCountLabel(purchasedCount, totalCount, currentLanguage),
                                     fontSize = 12.sp,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
@@ -193,7 +196,7 @@ fun ShoppingListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.RestartAlt,
-                                        contentDescription = "Ripristina lista (segna tutti come da prendere)",
+                                        contentDescription = com.example.ui.i18n.AppStrings.btnResetList(currentLanguage),
                                         tint = Color.White
                                     )
                                 }
@@ -203,7 +206,7 @@ fun ShoppingListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Share,
-                                        contentDescription = "Condividi Lista",
+                                        contentDescription = com.example.ui.i18n.AppStrings.btnShareList(currentLanguage),
                                         tint = Color.White
                                     )
                                 }
@@ -213,7 +216,7 @@ fun ShoppingListScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.FileDownload,
-                                        contentDescription = "Importa / Unisci Lista",
+                                        contentDescription = com.example.ui.i18n.AppStrings.dialogImportTitle(currentLanguage),
                                         tint = Color.White
                                     )
                                 }
@@ -224,7 +227,7 @@ fun ShoppingListScreen(
                                     ) {
                                         Icon(
                                             imageVector = Icons.Default.DeleteSweep,
-                                            contentDescription = "Pulisci spuntati",
+                                            contentDescription = com.example.ui.i18n.AppStrings.btnClearChecked(currentLanguage),
                                             tint = TerracottaAccent
                                         )
                                     }
@@ -257,14 +260,14 @@ fun ShoppingListScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp)
                         .testTag("input_search_shopping_list"),
-                    placeholder = { Text("Cerca nella spesa (alimento, reparto, giorno)...", fontSize = 13.sp) },
+                    placeholder = { Text(com.example.ui.i18n.AppStrings.shoppingListSearchPlaceholder(currentLanguage), fontSize = 13.sp) },
                     leadingIcon = {
-                        Icon(imageVector = Icons.Default.Search, contentDescription = "Cerca", tint = SagePrimary)
+                        Icon(imageVector = Icons.Default.Search, contentDescription = com.example.ui.i18n.AppStrings.searchFoodPlaceholder(currentLanguage), tint = SagePrimary)
                     },
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(imageVector = Icons.Default.Clear, contentDescription = "Cancella ricerca")
+                                Icon(imageVector = Icons.Default.Clear, contentDescription = com.example.ui.i18n.AppStrings.close(currentLanguage))
                             }
                         }
                     },
@@ -291,12 +294,16 @@ fun ShoppingListScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
-                                text = "Intervallo di Generazione",
+                                text = com.example.ui.i18n.AppStrings.generationRangeTitle(currentLanguage),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp
                             )
+                            val planTitle = com.example.ui.i18n.AppStrings.translatePlanTitle(
+                                activePlan?.title ?: com.example.ui.i18n.AppStrings.noActivePlan(currentLanguage),
+                                currentLanguage
+                            )
                             Text(
-                                text = "Piano: ${activePlan?.title ?: "Nessuno"}",
+                                text = "${com.example.ui.i18n.AppStrings.activePlanBadge(currentLanguage)}: $planTitle",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -312,19 +319,19 @@ fun ShoppingListScreen(
                             FilterChip(
                                 selected = selectedDays.size == 7,
                                 onClick = { viewModel.setQuickShoppingRange(listOf(1, 2, 3, 4, 5, 6, 7)) },
-                                label = { Text("Lun - Dom", fontSize = 11.sp) },
+                                label = { Text(com.example.ui.i18n.AppStrings.daysFilterAll(currentLanguage), fontSize = 11.sp) },
                                 modifier = Modifier.testTag("chip_range_full_week")
                             )
                             FilterChip(
                                 selected = selectedDays == setOf(1, 2, 3, 4),
                                 onClick = { viewModel.setQuickShoppingRange(listOf(1, 2, 3, 4)) },
-                                label = { Text("Lun - Gio", fontSize = 11.sp) },
+                                label = { Text(com.example.ui.i18n.AppStrings.daysFilterStartWeek(currentLanguage), fontSize = 11.sp) },
                                 modifier = Modifier.testTag("chip_range_mon_thu")
                             )
                             FilterChip(
                                 selected = selectedDays == setOf(5, 6, 7),
                                 onClick = { viewModel.setQuickShoppingRange(listOf(5, 6, 7)) },
-                                label = { Text("Ven - Dom", fontSize = 11.sp) },
+                                label = { Text(com.example.ui.i18n.AppStrings.daysFilterWeekend(currentLanguage), fontSize = 11.sp) },
                                 modifier = Modifier.testTag("chip_range_fri_sun")
                             )
                         }
@@ -347,7 +354,7 @@ fun ShoppingListScreen(
                                     contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
                                 ) {
                                     Text(
-                                        text = dayInfo.shortName,
+                                        text = dayInfo.getLocalizedShortName(currentLanguage),
                                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold
@@ -373,7 +380,7 @@ fun ShoppingListScreen(
                             ) {
                                 Icon(imageVector = Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Genera Lista Aggregata", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text(com.example.ui.i18n.AppStrings.btnGenerateAggregate(currentLanguage), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
 
                             FilledTonalButton(
@@ -383,9 +390,9 @@ fun ShoppingListScreen(
                                     .testTag("btn_quick_reset_list"),
                                 shape = RoundedCornerShape(12.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = "Ripristina", modifier = Modifier.size(16.dp), tint = Color.White)
+                                Icon(imageVector = Icons.Default.RestartAlt, contentDescription = com.example.ui.i18n.AppStrings.btnResetList(currentLanguage), modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Ripristina", fontSize = 12.sp, color = Color.White)
+                                Text(com.example.ui.i18n.AppStrings.btnResetList(currentLanguage), fontSize = 12.sp, color = Color.White)
                             }
 
                             FilledTonalButton(
@@ -397,7 +404,7 @@ fun ShoppingListScreen(
                             ) {
                                 Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
                                 Spacer(modifier = Modifier.width(4.dp))
-                                Text("Extra", fontSize = 12.sp, color = Color.White)
+                                Text(com.example.ui.i18n.AppStrings.btnAddExtra(currentLanguage), fontSize = 12.sp, color = Color.White)
                             }
                         }
                     }
@@ -436,7 +443,7 @@ fun ShoppingListScreen(
                                     Text(category.iconEmoji, fontSize = 16.sp)
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = category.displayName,
+                                        text = category.getLocalizedName(currentLanguage),
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
                                         color = Color.White
@@ -448,7 +455,7 @@ fun ShoppingListScreen(
                                         color = MaterialTheme.colorScheme.surface
                                     ) {
                                         Text(
-                                            text = "${categoryItems.size} da prendere",
+                                            text = com.example.ui.i18n.AppStrings.itemsToBuy(categoryItems.size, currentLanguage),
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = Color.White,
@@ -458,7 +465,7 @@ fun ShoppingListScreen(
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Icon(
                                         imageVector = if (isCollapsed) Icons.Default.KeyboardArrowDown else Icons.Default.KeyboardArrowUp,
-                                        contentDescription = if (isCollapsed) "Espandi ${category.displayName}" else "Comprimi ${category.displayName}",
+                                        contentDescription = null,
                                         tint = Color.White.copy(alpha = 0.8f),
                                         modifier = Modifier.size(20.dp)
                                     )
@@ -471,6 +478,7 @@ fun ShoppingListScreen(
                         items(categoryItems, key = { it.id }) { item ->
                             ShoppingItemRow(
                                 item = item,
+                                lang = currentLanguage,
                                 onToggle = { viewModel.toggleShoppingItem(item) },
                                 onAdjustQuantity = { itemToAdjust = item },
                                 onDelete = { viewModel.deleteShoppingItem(item.id) }
@@ -509,7 +517,7 @@ fun ShoppingListScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    text = "Articoli già presi (${filteredPurchasedItems.size})",
+                                    text = com.example.ui.i18n.AppStrings.purchasedSectionTitle(filteredPurchasedItems.size, currentLanguage),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 13.sp,
                                     color = Color.White
@@ -517,7 +525,7 @@ fun ShoppingListScreen(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = if (isPurchasedSectionCollapsed) "Mostra" else "Nascondi",
+                                    text = if (isPurchasedSectionCollapsed) com.example.ui.i18n.AppStrings.showLabel(currentLanguage) else com.example.ui.i18n.AppStrings.hideLabel(currentLanguage),
                                     fontSize = 11.sp,
                                     color = Color.White.copy(alpha = 0.8f)
                                 )
@@ -537,6 +545,7 @@ fun ShoppingListScreen(
                     items(filteredPurchasedItems, key = { it.id }) { item ->
                         ShoppingItemRow(
                             item = item,
+                            lang = currentLanguage,
                             onToggle = { viewModel.toggleShoppingItem(item) },
                             onAdjustQuantity = { itemToAdjust = item },
                             onDelete = { viewModel.deleteShoppingItem(item.id) }
@@ -562,18 +571,18 @@ fun ShoppingListScreen(
                         )
                         Spacer(modifier = Modifier.height(10.dp))
                         Text(
-                            text = "Nessun articolo trovato",
+                            text = com.example.ui.i18n.AppStrings.noFoodFoundTitle(currentLanguage),
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp
                         )
                         Text(
-                            text = "Nessun risultato per \"$searchQuery\"",
+                            text = com.example.ui.i18n.AppStrings.noFoodFoundSubtitle(searchQuery, currentLanguage),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         OutlinedButton(onClick = { searchQuery = "" }) {
-                            Text("Mostra tutti gli articoli")
+                            Text(com.example.ui.i18n.AppStrings.showAllItems(currentLanguage))
                         }
                     }
                 }
@@ -596,12 +605,12 @@ fun ShoppingListScreen(
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
-                            text = "Nessun articolo nella spesa",
+                            text = com.example.ui.i18n.AppStrings.emptyShoppingListTitle(currentLanguage),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Tocca 'Genera Lista Aggregata' per calcolare automaticamente gli alimenti dal piano attivo.",
+                            text = com.example.ui.i18n.AppStrings.emptyShoppingListSubtitle(currentLanguage),
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(horizontal = 32.dp),
@@ -615,6 +624,7 @@ fun ShoppingListScreen(
         // Dialog: Inserimento Extra Manuale
         if (showAddExtraDialog) {
             AddManualExtraDialog(
+                lang = currentLanguage,
                 onConfirm = { name, qty, unit ->
                     viewModel.addManualShoppingExtra(name, qty, unit)
                     showAddExtraDialog = false
@@ -625,17 +635,19 @@ fun ShoppingListScreen(
 
         // Dialog: Condivisione Lista Spesa con testo categorizzato
         if (showShareDialog) {
-            val categorizedFormattedText = remember(items) {
-                if (items.isEmpty()) return@remember "Lista della spesa vuota."
-                val sb = StringBuilder("🛒 Lista della Spesa - MealPlan\n\n")
+            val categorizedFormattedText = remember(items, currentLanguage) {
+                if (items.isEmpty()) return@remember if (currentLanguage == com.example.data.model.AppLanguage.IT) "Lista della spesa vuota." else "Shopping list is empty."
+                val headerTitle = if (currentLanguage == com.example.data.model.AppLanguage.IT) "🛒 Lista della Spesa - MealPlan\n\n" else "🛒 Shopping List - MealPlan\n\n"
+                val sb = StringBuilder(headerTitle)
                 FoodCategory.entries.forEach { cat ->
                     val catItems = items.filter { FoodCategory.categorize(it.name, it.isManualExtra) == cat }
                     if (catItems.isNotEmpty()) {
-                        sb.append("${cat.iconEmoji} ${cat.displayName}:\n")
+                        sb.append("${cat.iconEmoji} ${cat.getLocalizedName(currentLanguage)}:\n")
                         catItems.forEach {
                             val check = if (it.isPurchased) "✓" else "□"
                             val qtyStr = if (it.quantity % 1.0 == 0.0) it.quantity.toInt().toString() else String.format("%.1f", it.quantity)
-                            sb.append("$check ${it.name}: $qtyStr ${it.unit.shortName}\n")
+                            val foodName = com.example.ui.i18n.AppStrings.translateFoodName(it.name, currentLanguage)
+                            sb.append("$check $foodName: $qtyStr ${it.unit.getLocalizedShortName(currentLanguage)}\n")
                         }
                         sb.append("\n")
                     }
@@ -644,6 +656,7 @@ fun ShoppingListScreen(
             }
 
             ShareShoppingListDialog(
+                lang = currentLanguage,
                 formattedText = categorizedFormattedText,
                 jsonText = viewModel.exportShoppingListAsJson(),
                 onShareSystem = { textToShare ->
@@ -652,7 +665,7 @@ fun ShoppingListScreen(
                         putExtra(Intent.EXTRA_TEXT, textToShare)
                         type = "text/plain"
                     }
-                    val shareIntent = Intent.createChooser(sendIntent, "Condividi Lista della Spesa")
+                    val shareIntent = Intent.createChooser(sendIntent, com.example.ui.i18n.AppStrings.dialogShareListTitle(currentLanguage))
                     context.startActivity(shareIntent)
                 },
                 onCopy = { textToCopy ->
@@ -667,6 +680,7 @@ fun ShoppingListScreen(
         // Dialog: Importazione e Integrazione/Merge
         if (showImportDialog) {
             ImportShoppingListDialog(
+                lang = currentLanguage,
                 onConfirmImport = { jsonInput, replaceExisting ->
                     viewModel.importShoppingListFromJson(jsonInput, replaceExisting)
                     showImportDialog = false
@@ -680,6 +694,7 @@ fun ShoppingListScreen(
             val item = itemToAdjust!!
             AdjustQuantityDialog(
                 item = item,
+                lang = currentLanguage,
                 onSave = { actualQty, pantryQty ->
                     viewModel.updateShoppingItemQuantities(item.id, actualQty, pantryQty)
                     itemToAdjust = null
@@ -717,13 +732,13 @@ fun ConsumedDaysBadges(
     ) {
         tokens.forEach { dayToken ->
             val shortDay = when (dayToken.trim().lowercase()) {
-                "lun", "lunedì", "lunedi", "1", "l" -> "L"
-                "mar", "martedì", "martedi", "2", "ma" -> "Ma"
-                "mer", "mercoledì", "mercoledi", "3", "me" -> "Me"
-                "gio", "giovedì", "giovedi", "4", "g" -> "G"
-                "ven", "venerdì", "venerdi", "5", "v" -> "V"
-                "sab", "sabato", "6", "s" -> "S"
-                "dom", "domenica", "7", "d" -> "D"
+                "lun", "lunedì", "lunedi", "1", "l", "mon" -> "L"
+                "mar", "martedì", "martedi", "2", "ma", "tue" -> "Ma"
+                "mer", "mercoledì", "mercoledi", "3", "me", "wed" -> "Me"
+                "gio", "giovedì", "giovedi", "4", "g", "thu" -> "G"
+                "ven", "venerdì", "venerdi", "5", "v", "fri" -> "V"
+                "sab", "sabato", "6", "s", "sat" -> "S"
+                "dom", "domenica", "7", "d", "sun" -> "D"
                 else -> dayToken.take(2)
             }
 
@@ -747,6 +762,7 @@ fun ConsumedDaysBadges(
 @Composable
 fun ShoppingItemRow(
     item: ShoppingListItemEntity,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onToggle: () -> Unit,
     onAdjustQuantity: () -> Unit,
     onDelete: () -> Unit
@@ -755,6 +771,7 @@ fun ShoppingItemRow(
     val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else String.format("%.1f", item.quantity)
     val origStr = if (item.originalQuantity % 1.0 == 0.0) item.originalQuantity.toInt().toString() else String.format("%.1f", item.originalQuantity)
     val pantryStr = if (item.pantryQuantity % 1.0 == 0.0) item.pantryQuantity.toInt().toString() else String.format("%.1f", item.pantryQuantity)
+    val unitStr = item.unit.getLocalizedShortName(lang)
 
     Surface(
         modifier = Modifier
@@ -787,7 +804,7 @@ fun ShoppingItemRow(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = item.name,
+                        text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
                         fontWeight = if (item.isPurchased) FontWeight.Normal else FontWeight.SemiBold,
                         fontSize = 14.sp,
                         textDecoration = if (item.isPurchased) TextDecoration.LineThrough else TextDecoration.None,
@@ -813,7 +830,7 @@ fun ShoppingItemRow(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "$qtyStr ${item.unit.shortName}",
+                                    text = "$qtyStr $unitStr",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.White
@@ -821,7 +838,7 @@ fun ShoppingItemRow(
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Icon(
                                     imageVector = Icons.Default.Edit,
-                                    contentDescription = "Regola quantità e avanzi in dispensa",
+                                    contentDescription = com.example.ui.i18n.AppStrings.dialogAdjustPantryTitle(lang),
                                     tint = Color.White,
                                     modifier = Modifier.size(12.dp)
                                 )
@@ -841,7 +858,7 @@ fun ShoppingItemRow(
                     if (hasPantryAdjustment) {
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Pianificati: $origStr ${item.unit.shortName} • In dispensa: $pantryStr ${item.unit.shortName}",
+                            text = com.example.ui.i18n.AppStrings.plannedVsPantryLabel(origStr, pantryStr, unitStr, lang),
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
                             color = Color.White
@@ -856,7 +873,7 @@ fun ShoppingItemRow(
             ) {
                 Icon(
                     imageVector = Icons.Default.Delete,
-                    contentDescription = "Rimuovi articolo",
+                    contentDescription = com.example.ui.i18n.AppStrings.deleteFood(lang),
                     tint = Color.White.copy(alpha = 0.7f),
                     modifier = Modifier.size(18.dp)
                 )
@@ -871,11 +888,12 @@ fun ShoppingItemRow(
 @Composable
 fun AdjustQuantityDialog(
     item: ShoppingListItemEntity,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onSave: (actualQuantity: Double, pantryQuantity: Double) -> Unit,
     onDismiss: () -> Unit
 ) {
     val origQty = item.originalQuantity
-    val unit = item.unit.shortName
+    val unit = item.unit.getLocalizedShortName(lang)
 
     var pantryInput by remember {
         mutableStateOf(if (item.pantryQuantity > 0.0) {
@@ -895,9 +913,9 @@ fun AdjustQuantityDialog(
         onDismissRequest = onDismiss,
         title = {
             Column {
-                Text("Regola Quantità & Dispensa", fontWeight = FontWeight.Bold, fontSize = 17.sp)
+                Text(com.example.ui.i18n.AppStrings.dialogAdjustPantryTitle(lang), fontWeight = FontWeight.Bold, fontSize = 17.sp)
                 Text(
-                    text = item.name,
+                    text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
                     fontSize = 13.sp,
                     color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Medium
@@ -920,13 +938,13 @@ fun AdjustQuantityDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Fabbisogno dai pasti:", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(com.example.ui.i18n.AppStrings.foodNeedFromMeals(lang), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text("$origStr $unit", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
 
                 Text(
-                    text = "Hai degli avanzi in frigo o in dispensa? Inserisci la quantità disponibile per calcolare quanto comprare effettivamente:",
+                    text = com.example.ui.i18n.AppStrings.adjustPantryExplanation(lang),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -940,7 +958,7 @@ fun AdjustQuantityDialog(
                         val toBuy = kotlin.math.max(0.0, origQty - pVal)
                         actualInput = if (toBuy % 1.0 == 0.0) toBuy.toInt().toString() else String.format("%.1f", toBuy)
                     },
-                    label = { Text("Già in frigo / dispensa ($unit)") },
+                    label = { Text(com.example.ui.i18n.AppStrings.inPantryLabel(unit, lang)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -953,7 +971,7 @@ fun AdjustQuantityDialog(
                 OutlinedTextField(
                     value = actualInput,
                     onValueChange = { actualInput = it },
-                    label = { Text("Quantità reale da comprare ($unit) *") },
+                    label = { Text(com.example.ui.i18n.AppStrings.realToBuyLabel(unit, lang)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier
                         .fillMaxWidth()
@@ -970,7 +988,7 @@ fun AdjustQuantityDialog(
                     },
                     modifier = Modifier.align(Alignment.End)
                 ) {
-                    Text("Ripristina originale ($origStr $unit)", fontSize = 11.sp)
+                    Text(com.example.ui.i18n.AppStrings.restoreOriginalQty(origStr, unit, lang), fontSize = 11.sp)
                 }
             }
         },
@@ -984,12 +1002,12 @@ fun AdjustQuantityDialog(
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
                 modifier = Modifier.testTag("btn_save_adjusted_qty")
             ) {
-                Text("Salva Quantità")
+                Text(com.example.ui.i18n.AppStrings.saveQuantity(lang))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )
@@ -997,6 +1015,7 @@ fun AdjustQuantityDialog(
 
 @Composable
 fun AddManualExtraDialog(
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onConfirm: (name: String, quantity: Double, unit: QuantityUnit) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1006,18 +1025,18 @@ fun AddManualExtraDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Aggiungi Articolo Extra") },
+        title = { Text(com.example.ui.i18n.AppStrings.dialogAddExtraTitle(lang)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Aggiungi articoli extra non presenti nei pasti (es. sapone per piatti, sacchetti frigo, sale...)",
+                    text = com.example.ui.i18n.AppStrings.extraFoodDialogExplanation(lang),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Nome articolo (es. Detersivo piatti)") },
+                    label = { Text(com.example.ui.i18n.AppStrings.extraFoodNameLabel(lang)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().testTag("input_extra_name")
                 )
@@ -1029,7 +1048,7 @@ fun AddManualExtraDialog(
                     OutlinedTextField(
                         value = quantityInput,
                         onValueChange = { quantityInput = it },
-                        label = { Text("Quantità") },
+                        label = { Text(com.example.ui.i18n.AppStrings.quantityLabel(lang)) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         modifier = Modifier.weight(1f).testTag("input_extra_qty"),
                         singleLine = true
@@ -1037,12 +1056,12 @@ fun AddManualExtraDialog(
                     FilterChip(
                         selected = selectedUnit == QuantityUnit.PIECES,
                         onClick = { selectedUnit = QuantityUnit.PIECES },
-                        label = { Text("Pezzi") }
+                        label = { Text(QuantityUnit.PIECES.getLocalizedName(lang)) }
                     )
                     FilterChip(
                         selected = selectedUnit == QuantityUnit.GRAMS,
                         onClick = { selectedUnit = QuantityUnit.GRAMS },
-                        label = { Text("Grammi") }
+                        label = { Text(QuantityUnit.GRAMS.getLocalizedName(lang)) }
                     )
                 }
             }
@@ -1058,12 +1077,12 @@ fun AddManualExtraDialog(
                 enabled = name.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
             ) {
-                Text("Aggiungi")
+                Text(com.example.ui.i18n.AppStrings.addExtraConfirm(lang))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )
@@ -1071,6 +1090,7 @@ fun AddManualExtraDialog(
 
 @Composable
 fun ShareShoppingListDialog(
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     formattedText: String,
     jsonText: String,
     onShareSystem: (String) -> Unit,
@@ -1081,11 +1101,11 @@ fun ShareShoppingListDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Condividi Lista della Spesa") },
+        title = { Text(com.example.ui.i18n.AppStrings.dialogShareListTitle(lang)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(
-                    text = "Invia la lista organizzata per corsie di supermercato, oppure esporta il formato JSON strutturato per consentire l'unione con altre liste.",
+                    text = com.example.ui.i18n.AppStrings.shareListExplanation(lang),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1094,12 +1114,12 @@ fun ShareShoppingListDialog(
                     FilterChip(
                         selected = !shareAsJson,
                         onClick = { shareAsJson = false },
-                        label = { Text("Testo Organizzato") }
+                        label = { Text(com.example.ui.i18n.AppStrings.tabOrganizedText(lang)) }
                     )
                     FilterChip(
                         selected = shareAsJson,
                         onClick = { shareAsJson = true },
-                        label = { Text("Formato JSON") }
+                        label = { Text(com.example.ui.i18n.AppStrings.tabJsonFormat(lang)) }
                     )
                 }
 
@@ -1129,7 +1149,7 @@ fun ShareShoppingListDialog(
             ) {
                 Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Condividi")
+                Text(com.example.ui.i18n.AppStrings.btnShareList(lang))
             }
         },
         dismissButton = {
@@ -1141,7 +1161,7 @@ fun ShareShoppingListDialog(
             ) {
                 Icon(imageVector = Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                Text("Copia")
+                Text(com.example.ui.i18n.AppStrings.copy(lang))
             }
         }
     )
@@ -1149,6 +1169,7 @@ fun ShareShoppingListDialog(
 
 @Composable
 fun ImportShoppingListDialog(
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onConfirmImport: (jsonInput: String, replaceExisting: Boolean) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1157,11 +1178,11 @@ fun ImportShoppingListDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Importa / Unisci Lista") },
+        title = { Text(com.example.ui.i18n.AppStrings.dialogImportTitle(lang)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "Incolla il payload JSON della lista della spesa condivisa.",
+                    text = com.example.ui.i18n.AppStrings.importExplanation(lang),
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -1177,7 +1198,7 @@ fun ImportShoppingListDialog(
                 )
 
                 Text(
-                    text = "Modalità di importazione:",
+                    text = com.example.ui.i18n.AppStrings.importModeTitle(lang),
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp
                 )
@@ -1187,7 +1208,7 @@ fun ImportShoppingListDialog(
                         selected = !replaceExisting,
                         onClick = { replaceExisting = false }
                     )
-                    Text("Unisci alla lista esistente (somma le quantità)", fontSize = 12.sp)
+                    Text(com.example.ui.i18n.AppStrings.importModeMerge(lang), fontSize = 12.sp)
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1195,7 +1216,7 @@ fun ImportShoppingListDialog(
                         selected = replaceExisting,
                         onClick = { replaceExisting = true }
                     )
-                    Text("Sostituisci interamente la lista attuale", fontSize = 12.sp)
+                    Text(com.example.ui.i18n.AppStrings.importModeReplace(lang), fontSize = 12.sp)
                 }
             }
         },
@@ -1209,12 +1230,12 @@ fun ImportShoppingListDialog(
                 enabled = jsonInput.isNotBlank(),
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
             ) {
-                Text("Importa")
+                Text(com.example.ui.i18n.AppStrings.importAction(lang))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )

@@ -8,6 +8,18 @@ enum class FoodCategory(val displayName: String, val iconEmoji: String, val colo
     PANTRY_SPICES("Dispensa e Condimenti", "🥫", 0xFF8D6E63),
     EXTRA_HOUSEHOLD("Extra e Cura della Casa", "🧹", 0xFF7E57C2);
 
+    fun getLocalizedName(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> displayName
+        AppLanguage.EN -> when (this) {
+            FRUITS_VEGETABLES -> "Fruits & Vegetables"
+            MEAT_FISH -> "Meat & Seafood"
+            DAIRY_EGGS -> "Dairy & Eggs"
+            GRAINS_PASTA -> "Grains, Bread & Pasta"
+            PANTRY_SPICES -> "Pantry & Condiments"
+            EXTRA_HOUSEHOLD -> "Extra & Household"
+        }
+    }
+
     companion object {
         fun fromCategoryString(value: String?): FoodCategory? {
             if (value.isNullOrBlank()) return null

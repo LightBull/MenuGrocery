@@ -144,14 +144,18 @@ fun DailyMealPlanScreen(
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = activePlan?.title ?: com.example.ui.i18n.AppStrings.noActivePlan(currentLanguage),
+                            text = com.example.ui.i18n.AppStrings.translatePlanTitle(
+                                activePlan?.title ?: com.example.ui.i18n.AppStrings.noActivePlan(currentLanguage),
+                                currentLanguage
+                            ),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
-                        if (!activePlan?.notes.isNullOrBlank()) {
+                        val planNotes = com.example.ui.i18n.AppStrings.translatePlanNotes(activePlan?.notes, currentLanguage)
+                        if (!planNotes.isNullOrBlank()) {
                             Text(
-                                text = activePlan?.notes ?: "",
+                                text = planNotes,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1
@@ -163,17 +167,6 @@ fun DailyMealPlanScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        IconButton(
-                            onClick = onNavigateToSettings,
-                            modifier = Modifier.testTag("btn_open_settings")
-                        ) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.Default.Settings,
-                                contentDescription = com.example.ui.i18n.AppStrings.settingsTitle(currentLanguage),
-                                tint = androidx.compose.ui.graphics.Color.White
-                            )
-                        }
-
                         IconButton(
                             onClick = { showDefrostDiagnostics = true },
                             modifier = Modifier.testTag("btn_defrost_diagnostics_daily")
@@ -190,7 +183,7 @@ fun DailyMealPlanScreen(
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier.testTag("btn_switch_plan")
                         ) {
-                            Text(if (currentLanguage == com.example.data.model.AppLanguage.IT) "Piani" else "Plans", fontSize = 12.sp)
+                            Text(com.example.ui.i18n.AppStrings.changePlan(currentLanguage), fontSize = 12.sp)
                         }
                     }
                 }
@@ -201,19 +194,24 @@ fun DailyMealPlanScreen(
         item {
             DaySelectorRow(
                 selectedDay = selectedDay,
-                onDaySelected = { viewModel.selectDay(it) }
+                onDaySelected = { viewModel.selectDay(it) },
+                lang = currentLanguage
             )
         }
 
         // Scheda riepilogo macronutrienti stimati del giorno
         item {
-            DailyNutritionalCard(summary = dailySummary)
+            DailyNutritionalCard(
+                summary = dailySummary,
+                lang = currentLanguage
+            )
         }
 
-        // 5 Sezioni Pasti (Colazione, Spuntino Mattutino, Pranzo, Spuntino Pomeridiano, Cena) di SOLA LETTURA
+        // 5 Sezioni Pasti di SOLA LETTURA
         items(mealsForDay) { mealWithItems ->
             ReadOnlyMealSectionCard(
                 mealWithItems = mealWithItems,
+                lang = currentLanguage,
                 onTestDefrostClick = { item ->
                     viewModel.testDefrostNotification(item.name, mealWithItems.mealType)
                 }
@@ -233,6 +231,7 @@ fun DailyMealPlanScreen(
 @Composable
 fun ReadOnlyMealSectionCard(
     mealWithItems: MealWithItems,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onTestDefrostClick: (FoodItemModel) -> Unit
 ) {
     Card(
@@ -269,12 +268,12 @@ fun ReadOnlyMealSectionCard(
                 Spacer(modifier = Modifier.width(10.dp))
                 Column {
                     Text(
-                        text = mealWithItems.mealType.displayName,
+                        text = mealWithItems.mealType.getLocalizedName(lang),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Orario consigliato: ${mealWithItems.mealType.typicalTime}",
+                        text = com.example.ui.i18n.AppStrings.recommendedTime(mealWithItems.mealType.typicalTime, lang),
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -292,7 +291,7 @@ fun ReadOnlyMealSectionCard(
                     color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
                 ) {
                     Text(
-                        text = "Nessun alimento programmato per questo pasto.",
+                        text = com.example.ui.i18n.AppStrings.noFoodPlannedInMeal(lang),
                         modifier = Modifier.padding(12.dp),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -303,6 +302,7 @@ fun ReadOnlyMealSectionCard(
                     mealWithItems.items.forEach { item ->
                         ReadOnlyFoodItemRow(
                             item = item,
+                            lang = lang,
                             onTestDefrost = { onTestDefrostClick(item) }
                         )
                     }
@@ -315,6 +315,7 @@ fun ReadOnlyMealSectionCard(
 @Composable
 fun ReadOnlyFoodItemRow(
     item: FoodItemModel,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onTestDefrost: () -> Unit
 ) {
     Surface(
@@ -334,14 +335,14 @@ fun ReadOnlyFoodItemRow(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else String.format("%.1f", item.quantity)
                     Text(
-                        text = item.name,
+                        text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "($qtyStr ${item.unit.shortName})",
+                        text = "($qtyStr ${item.unit.getLocalizedShortName(lang)})",
                         fontWeight = FontWeight.Normal,
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -373,7 +374,7 @@ fun ReadOnlyFoodItemRow(
                     Text("P: ${itemProt}g", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("C: ${itemCarb}g", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text("G: ${itemFat}g", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("${category.iconEmoji} ${category.displayName}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("${category.iconEmoji} ${category.getLocalizedName(lang)}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
 
                 // Flag scongelamento
@@ -388,7 +389,7 @@ fun ReadOnlyFoodItemRow(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = "Test notifica scongelamento",
+                                contentDescription = com.example.ui.i18n.AppStrings.testDefrostNotification(lang),
                                 tint = CartaDaZucchero,
                                 modifier = Modifier.size(16.dp)
                             )

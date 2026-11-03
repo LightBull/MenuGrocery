@@ -70,6 +70,7 @@ import com.example.ui.theme.TerracottaAccent
 fun DaySelectorRow(
     selectedDay: Int,
     onDaySelected: (Int) -> Unit,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     modifier: Modifier = Modifier
 ) {
     LazyRow(
@@ -96,13 +97,13 @@ fun DaySelectorRow(
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = dayInfo.shortName,
+                        text = dayInfo.getLocalizedShortName(lang),
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         fontSize = 13.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = dayInfo.name.take(3),
+                        text = dayInfo.getLocalizedFullName(lang).take(3),
                         fontSize = 11.sp,
                         color = if (isSelected) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
@@ -115,6 +116,7 @@ fun DaySelectorRow(
 @Composable
 fun DailyNutritionalCard(
     summary: NutritionalSummary,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -137,7 +139,7 @@ fun DailyNutritionalCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = Icons.Default.LocalFireDepartment,
-                        contentDescription = "Calorie",
+                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Calorie" else "Calories",
                         tint = TerracottaAccent,
                         modifier = Modifier.size(20.dp)
                     )
@@ -150,7 +152,7 @@ fun DailyNutritionalCard(
                     )
                 }
                 Text(
-                    text = "Totale stimato del giorno",
+                    text = if (lang == com.example.data.model.AppLanguage.IT) "Totale stimato del giorno" else "Estimated daily total",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
                 )
@@ -158,8 +160,8 @@ fun DailyNutritionalCard(
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 MacroPill(label = "Prot", value = "${summary.protein.toInt()}g", color = SagePrimary)
-                MacroPill(label = "Carb", value = "${summary.carbs.toInt()}g", color = CartaDaZucchero)
-                MacroPill(label = "Gras", value = "${summary.fat.toInt()}g", color = TerracottaAccent)
+                MacroPill(label = if (lang == com.example.data.model.AppLanguage.IT) "Carb" else "Carbs", value = "${summary.carbs.toInt()}g", color = CartaDaZucchero)
+                MacroPill(label = if (lang == com.example.data.model.AppLanguage.IT) "Gras" else "Fat", value = "${summary.fat.toInt()}g", color = TerracottaAccent)
             }
         }
     }
@@ -259,6 +261,7 @@ fun FoodSourceDot(
 fun CategorySelectorDropdown(
     selectedCategory: FoodCategory,
     onCategorySelected: (FoodCategory) -> Unit,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -269,10 +272,10 @@ fun CategorySelectorDropdown(
         modifier = modifier.fillMaxWidth()
     ) {
         OutlinedTextField(
-            value = "${selectedCategory.iconEmoji} ${selectedCategory.displayName}",
+            value = "${selectedCategory.iconEmoji} ${selectedCategory.getLocalizedName(lang)}",
             onValueChange = {},
             readOnly = true,
-            label = { Text("Categoria (Corsia Supermercato)") },
+            label = { Text(if (lang == com.example.data.model.AppLanguage.IT) "Categoria (Corsia Supermercato)" else "Category (Supermarket Aisle)") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             modifier = Modifier
                 .menuAnchor()
@@ -291,7 +294,7 @@ fun CategorySelectorDropdown(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(category.iconEmoji, fontSize = 16.sp)
                             Spacer(modifier = Modifier.width(10.dp))
-                            Text(category.displayName, fontSize = 13.sp, fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal)
+                            Text(category.getLocalizedName(lang), fontSize = 13.sp, fontWeight = if (category == selectedCategory) FontWeight.Bold else FontWeight.Normal)
                         }
                     },
                     onClick = {
@@ -310,6 +313,7 @@ fun CategorySelectorDropdown(
 @Composable
 fun CopyFoodItemDialog(
     foodName: String,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onDismiss: () -> Unit,
     onConfirmCopy: (targetDays: List<Int>, targetMealTypes: List<MealType>) -> Unit
 ) {
@@ -336,12 +340,12 @@ fun CopyFoodItemDialog(
                 )
                 Column {
                     Text(
-                        text = "Copia Alimento",
+                        text = com.example.ui.i18n.AppStrings.modalCopyFoodTitle(lang),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = foodName,
+                        text = com.example.ui.i18n.AppStrings.translateFoodName(foodName, lang),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -363,7 +367,7 @@ fun CopyFoodItemDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Giorni di destinazione",
+                            text = com.example.ui.i18n.AppStrings.selectTargetDaysLabel(lang),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -374,7 +378,11 @@ fun CopyFoodItemDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = if (allSelectedDays) "Deseleziona tutti" else "Tutti i giorni",
+                                text = if (allSelectedDays) {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Deseleziona tutti" else "Deselect all"
+                                } else {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Tutti i giorni" else "All days"
+                                },
                                 fontSize = 11.sp
                             )
                         }
@@ -396,7 +404,7 @@ fun CopyFoodItemDialog(
                                         selectedDays + dayInfo.dayIndex
                                     }
                                 },
-                                label = { Text(dayInfo.shortName, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                label = { Text(dayInfo.getLocalizedShortName(lang), fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -411,7 +419,7 @@ fun CopyFoodItemDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Pasti di destinazione",
+                            text = com.example.ui.i18n.AppStrings.selectTargetMealsLabel(lang),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -422,7 +430,11 @@ fun CopyFoodItemDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = if (allSelectedMeals) "Deseleziona tutti" else "Tutti i pasti",
+                                text = if (allSelectedMeals) {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Deseleziona tutti" else "Deselect all"
+                                } else {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Tutti i pasti" else "All meals"
+                                },
                                 fontSize = 11.sp
                             )
                         }
@@ -457,7 +469,7 @@ fun CopyFoodItemDialog(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = mealType.displayName,
+                                        text = mealType.getLocalizedName(lang),
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -470,7 +482,10 @@ fun CopyFoodItemDialog(
                 val totalCopies = selectedDays.size * selectedMealTypes.size
                 if (totalCopies > 0) {
                     Text(
-                        text = "Verrà copiato su $totalCopies pasti complessivi.",
+                        text = if (lang == com.example.data.model.AppLanguage.IT)
+                            "Verrà copiato su $totalCopies pasti complessivi."
+                        else
+                            "Will be copied to $totalCopies total meals.",
                         fontSize = 11.sp,
                         color = SagePrimary,
                         fontWeight = FontWeight.Medium
@@ -486,12 +501,12 @@ fun CopyFoodItemDialog(
                 enabled = selectedDays.isNotEmpty() && selectedMealTypes.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
             ) {
-                Text("Copia Alimento", fontWeight = FontWeight.Bold)
+                Text(com.example.ui.i18n.AppStrings.confirmCopyBtn(lang), fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )
@@ -505,6 +520,7 @@ fun CopyDayDialog(
     sourceDayIndex: Int,
     sourceDayName: String,
     totalItemsCount: Int,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onDismiss: () -> Unit,
     onConfirmCopy: (targetDays: List<Int>) -> Unit
 ) {
@@ -527,12 +543,15 @@ fun CopyDayDialog(
                 )
                 Column {
                     Text(
-                        text = "Copia Intero Giorno",
+                        text = if (lang == com.example.data.model.AppLanguage.IT) "Copia Intero Giorno" else "Copy Entire Day",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "Da $sourceDayName ($totalItemsCount alimenti configurati)",
+                        text = if (lang == com.example.data.model.AppLanguage.IT)
+                            "Da $sourceDayName ($totalItemsCount alimenti configurati)"
+                        else
+                            "From $sourceDayName ($totalItemsCount foods configured)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -552,7 +571,7 @@ fun CopyDayDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Giorni di destinazione",
+                        text = com.example.ui.i18n.AppStrings.selectTargetDaysLabel(lang),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold
                     )
@@ -563,14 +582,21 @@ fun CopyDayDialog(
                         contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                     ) {
                         Text(
-                            text = if (allSelectedDays) "Deseleziona tutti" else "Tutti gli altri giorni",
+                            text = if (allSelectedDays) {
+                                if (lang == com.example.data.model.AppLanguage.IT) "Deseleziona tutti" else "Deselect all"
+                            } else {
+                                if (lang == com.example.data.model.AppLanguage.IT) "Tutti gli altri giorni" else "All other days"
+                            },
                             fontSize = 11.sp
                         )
                     }
                 }
 
                 Text(
-                    text = "Tutti i pasti di $sourceDayName (Colazione, Spuntini, Pranzo, Cena) verranno copiati nei giorni selezionati aggiungendosi agli alimenti già configurati.",
+                    text = if (lang == com.example.data.model.AppLanguage.IT)
+                        "Tutti i pasti di $sourceDayName verranno copiati nei giorni selezionati aggiungendosi agli alimenti già configurati."
+                    else
+                        "All meals from $sourceDayName will be copied to selected days, added to existing configured foods.",
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -604,7 +630,7 @@ fun CopyDayDialog(
                                 )
                                 Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = dayInfo.fullName,
+                                    text = dayInfo.getLocalizedFullName(lang),
                                     fontSize = 13.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -615,7 +641,10 @@ fun CopyDayDialog(
 
                 if (selectedDays.isNotEmpty()) {
                     Text(
-                        text = "Verranno copiati $totalItemsCount alimenti su ${selectedDays.size} giorno/i.",
+                        text = if (lang == com.example.data.model.AppLanguage.IT)
+                            "Verranno copiati $totalItemsCount alimenti su ${selectedDays.size} giorno/i."
+                        else
+                            "$totalItemsCount foods will be copied to ${selectedDays.size} day(s).",
                         fontSize = 11.sp,
                         color = SagePrimary,
                         fontWeight = FontWeight.Medium
@@ -631,12 +660,12 @@ fun CopyDayDialog(
                 enabled = selectedDays.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
             ) {
-                Text("Copia Giorno", fontWeight = FontWeight.Bold)
+                Text(if (lang == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )
@@ -651,6 +680,7 @@ fun CopyMealDialog(
     dayName: String,
     totalItemsCount: Int,
     initialMealType: MealType,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     onDismiss: () -> Unit,
     onConfirmCopy: (targetDays: List<Int>, targetMealTypes: List<MealType>) -> Unit
 ) {
@@ -677,12 +707,15 @@ fun CopyMealDialog(
                 )
                 Column {
                     Text(
-                        text = "Copia Intero Pasto",
+                        text = if (lang == com.example.data.model.AppLanguage.IT) "Copia Intero Pasto" else "Copy Entire Meal",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "$mealName di $dayName ($totalItemsCount alimenti)",
+                        text = if (lang == com.example.data.model.AppLanguage.IT)
+                            "$mealName di $dayName ($totalItemsCount alimenti)"
+                        else
+                            "$mealName of $dayName ($totalItemsCount foods)",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -704,7 +737,7 @@ fun CopyMealDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Giorni di destinazione",
+                            text = com.example.ui.i18n.AppStrings.selectTargetDaysLabel(lang),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -715,7 +748,11 @@ fun CopyMealDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = if (allSelectedDays) "Deseleziona tutti" else "Tutti i giorni",
+                                text = if (allSelectedDays) {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Deseleziona tutti" else "Deselect all"
+                                } else {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Tutti i giorni" else "All days"
+                                },
                                 fontSize = 11.sp
                             )
                         }
@@ -737,7 +774,7 @@ fun CopyMealDialog(
                                         selectedDays + dayInfo.dayIndex
                                     }
                                 },
-                                label = { Text(dayInfo.shortName, fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
+                                label = { Text(dayInfo.getLocalizedShortName(lang), fontSize = 11.sp, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal) },
                                 modifier = Modifier.weight(1f)
                             )
                         }
@@ -752,7 +789,7 @@ fun CopyMealDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Pasti di destinazione",
+                            text = com.example.ui.i18n.AppStrings.selectTargetMealsLabel(lang),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold
                         )
@@ -763,7 +800,11 @@ fun CopyMealDialog(
                             contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                         ) {
                             Text(
-                                text = if (allSelectedMeals) "Deseleziona tutti" else "Tutti i pasti",
+                                text = if (allSelectedMeals) {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Deseleziona tutti" else "Deselect all"
+                                } else {
+                                    if (lang == com.example.data.model.AppLanguage.IT) "Tutti i pasti" else "All meals"
+                                },
                                 fontSize = 11.sp
                             )
                         }
@@ -798,7 +839,7 @@ fun CopyMealDialog(
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = mealType.displayName,
+                                        text = mealType.getLocalizedName(lang),
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -811,7 +852,10 @@ fun CopyMealDialog(
                 val totalTargetMeals = selectedDays.size * selectedMealTypes.size
                 if (totalTargetMeals > 0) {
                     Text(
-                        text = "I $totalItemsCount alimenti verranno copiati su $totalTargetMeals pasti selezionati.",
+                        text = if (lang == com.example.data.model.AppLanguage.IT)
+                            "I $totalItemsCount alimenti verranno copiati su $totalTargetMeals pasti selezionati."
+                        else
+                            "$totalItemsCount foods will be copied to $totalTargetMeals selected meals.",
                         fontSize = 11.sp,
                         color = SagePrimary,
                         fontWeight = FontWeight.Medium
@@ -827,12 +871,12 @@ fun CopyMealDialog(
                 enabled = selectedDays.isNotEmpty() && selectedMealTypes.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
             ) {
-                Text("Copia Pasto", fontWeight = FontWeight.Bold)
+                Text(if (lang == com.example.data.model.AppLanguage.IT) "Copia Pasto" else "Copy Meal", fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
             OutlinedButton(onClick = onDismiss) {
-                Text("Annulla")
+                Text(com.example.ui.i18n.AppStrings.cancel(lang))
             }
         }
     )

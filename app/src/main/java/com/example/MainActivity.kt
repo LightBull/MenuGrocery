@@ -52,6 +52,11 @@ import com.example.ui.screens.DailyMealPlanScreen
 import com.example.ui.screens.MealPlansManagementScreen
 import com.example.ui.screens.ShoppingListScreen
 import com.example.ui.theme.MealPlanTheme
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 import com.example.ui.viewmodel.MealPlanViewModel
@@ -68,6 +73,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MealPlanAppRoot(
     viewModel: MealPlanViewModel = viewModel()
@@ -123,6 +129,42 @@ fun MealPlanAppRoot(
         modifier = Modifier.fillMaxSize(),
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
+        topBar = {
+            if (!showSettings) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when (selectedTab) {
+                                0 -> com.example.ui.i18n.AppStrings.navMealPlan(currentLanguage)
+                                1 -> com.example.ui.i18n.AppStrings.navShoppingList(currentLanguage)
+                                2 -> com.example.ui.i18n.AppStrings.navMyPlans(currentLanguage)
+                                else -> "MealPlan"
+                            },
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = Color.White
+                        )
+                    },
+                    actions = {
+                        IconButton(
+                            onClick = { showSettings = true },
+                            modifier = Modifier.testTag("topbar_btn_settings")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = com.example.ui.i18n.AppStrings.settingsTitle(currentLanguage),
+                                tint = Color.White
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    )
+                )
+            }
+        },
         bottomBar = {
             if (!showSettings) {
                 NavigationBar(
