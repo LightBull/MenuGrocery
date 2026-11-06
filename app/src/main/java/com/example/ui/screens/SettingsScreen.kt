@@ -49,9 +49,23 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.app.Activity
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
+import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.AppLanguage
+import com.example.data.model.SubscriptionTier
 import com.example.ui.components.FoodSourceDot
 import com.example.ui.i18n.AppStrings
+import com.example.ui.theme.CartaDaZucchero
 import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 import com.example.ui.viewmodel.MealPlanViewModel
@@ -64,6 +78,11 @@ fun SettingsScreen(
     modifier: Modifier = Modifier
 ) {
     val currentLanguage by viewModel.currentLanguage.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
+    val subscriptionState by viewModel.subscriptionState.collectAsState()
+    val context = LocalContext.current
+    val activity = context as? Activity
+    val cloudAndLoginEnabled = false
 
     BackHandler {
         onNavigateBack()
@@ -107,6 +126,272 @@ fun SettingsScreen(
             contentPadding = PaddingValues(top = 16.dp, bottom = 48.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
+            // Sezione Account Google (mostrata solo se cloud/auth abilitato)
+            if (cloudAndLoginEnabled && currentUser != null) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = SagePrimaryContainer,
+                                    modifier = Modifier.size(44.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        val initial = (currentUser?.displayName ?: currentUser?.email ?: "U").take(1).uppercase()
+                                        Text(
+                                            text = initial,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 20.sp,
+                                            color = SagePrimary
+                                        )
+                                    }
+                                }
+
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = currentUser?.displayName ?: AppStrings.accountProfileTitle(currentLanguage),
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = currentUser?.email ?: "",
+                                        fontSize = 12.sp,
+                                        color = Color.White.copy(alpha = 0.7f)
+                                    )
+                                }
+
+                                OutlinedButton(
+                                    onClick = {
+                                        if (activity != null) {
+                                            viewModel.signOut(activity) {
+                                                onNavigateBack()
+                                            }
+                                        }
+                                    },
+                                    modifier = Modifier.testTag("btn_settings_sign_out"),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ExitToApp,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp),
+                                        tint = Color.White
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = AppStrings.signOut(currentLanguage),
+                                        fontSize = 12.sp,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Sezione Abbonamento Cloud (mostrata solo se abilitata)
+            if (cloudAndLoginEnabled) {
+                item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color(0xFFFFD54F).copy(alpha = 0.2f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Star,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFFD54F),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = AppStrings.subscriptionSectionTitle(currentLanguage),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (subscriptionState.tier == SubscriptionTier.PREMIUM)
+                                            AppStrings.subscriptionStatusActive(currentLanguage)
+                                        else
+                                            AppStrings.subscriptionStatusFree(currentLanguage),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = if (subscriptionState.tier == SubscriptionTier.PREMIUM)
+                                            SagePrimary
+                                        else
+                                            Color.White.copy(alpha = 0.6f)
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (subscriptionState.tier == SubscriptionTier.PREMIUM)
+                                    SagePrimaryContainer.copy(alpha = 0.4f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (subscriptionState.tier == SubscriptionTier.PREMIUM) SagePrimary else Color.Gray.copy(alpha = 0.4f)
+                                )
+                            ) {
+                                Text(
+                                    text = if (subscriptionState.tier == SubscriptionTier.PREMIUM) "PREMIUM" else "FREE",
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (subscriptionState.tier == SubscriptionTier.PREMIUM) SagePrimary else Color.White.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Banner informativo sulla simulazione
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = AppStrings.subscriptionSimulatedBadge(currentLanguage),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFFFD54F)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = AppStrings.subscriptionSimulatedDesc(currentLanguage),
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.75f),
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Toggle di test simulazione
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = AppStrings.subscriptionToggleTitle(currentLanguage),
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = AppStrings.subscriptionToggleSubtitle(currentLanguage),
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+
+                            Switch(
+                                checked = subscriptionState.tier == SubscriptionTier.PREMIUM,
+                                onCheckedChange = { isChecked ->
+                                    viewModel.setSubscriptionTier(
+                                        if (isChecked) SubscriptionTier.PREMIUM else SubscriptionTier.FREE
+                                    )
+                                },
+                                modifier = Modifier.testTag("switch_subscription_tier"),
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = SagePrimary,
+                                    checkedTrackColor = SagePrimary.copy(alpha = 0.4f)
+                                )
+                            )
+                        }
+
+                        if (subscriptionState.tier == SubscriptionTier.PREMIUM) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Button(
+                                onClick = {
+                                    viewModel.syncWithCloud { up, down ->
+                                        viewModel.postFeedbackMessage(
+                                            if (currentLanguage == AppLanguage.IT)
+                                                "Sincronizzazione completata: $up caricati, $down scaricati"
+                                            else
+                                                "Sync completed: $up uploaded, $down downloaded"
+                                        )
+                                    }
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(44.dp)
+                                    .testTag("btn_manual_cloud_sync"),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = SagePrimaryContainer,
+                                    contentColor = SagePrimary
+                                )
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Sincronizza Cloud Adesso" else "Sync Cloud Now",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
             // Sezione Lingua
             item {
                 Card(

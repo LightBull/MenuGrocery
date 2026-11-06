@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -73,7 +75,15 @@ fun DaySelectorRow(
     lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
     modifier: Modifier = Modifier
 ) {
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(selectedDay) {
+        val targetIndex = (selectedDay - 1).coerceIn(0, DayOfWeekInfo.ALL_DAYS.size - 1)
+        listState.animateScrollToItem(targetIndex)
+    }
+
     LazyRow(
+        state = listState,
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),

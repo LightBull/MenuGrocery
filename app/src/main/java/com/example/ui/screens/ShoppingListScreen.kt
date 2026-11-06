@@ -971,7 +971,7 @@ fun AdjustQuantityDialog(
                 OutlinedTextField(
                     value = actualInput,
                     onValueChange = { actualInput = it },
-                    label = { Text(com.example.ui.i18n.AppStrings.realToBuyLabel(unit, lang)) },
+                    label = { Text(com.example.ui.i18n.AppStrings.quantityLabel(lang)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier
                         .fillMaxWidth()

@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -30,6 +31,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -196,8 +198,8 @@ fun MealPlansManagementScreen(
             }
         }
 
-        // FAB per Creare Nuovo Piano (apre l'editor completo con i pasti della settimana)
-        ExtendedFloatingActionButton(
+        // FAB per Creare Nuovo Piano (arrotondato con sola icona +)
+        FloatingActionButton(
             onClick = { isCreatingNew = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
@@ -205,11 +207,13 @@ fun MealPlansManagementScreen(
                 .testTag("fab_create_plan"),
             containerColor = SagePrimary,
             contentColor = Color.White,
-            shape = RoundedCornerShape(18.dp)
+            shape = CircleShape
         ) {
-            Icon(imageVector = Icons.Default.Add, contentDescription = null)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(com.example.ui.i18n.AppStrings.btnNewPlan(currentLanguage), fontWeight = FontWeight.Bold)
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = com.example.ui.i18n.AppStrings.btnNewPlan(currentLanguage),
+                modifier = Modifier.size(26.dp)
+            )
         }
 
         if (showResetDbDialog) {

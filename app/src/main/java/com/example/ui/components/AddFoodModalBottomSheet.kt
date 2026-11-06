@@ -309,7 +309,7 @@ fun AddFoodModalBottomSheet(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("quantity_input"),
-                    label = { Text("${AppStrings.quantityLabel(lang)} *") },
+                    label = { Text(AppStrings.quantityLabel(lang)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     shape = RoundedCornerShape(14.dp)
@@ -358,18 +358,11 @@ fun AddFoodModalBottomSheet(
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = AppStrings.defrostReminderLabel(lang),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp
-                            )
-                            Text(
-                                text = AppStrings.defrostReminderSubtitle(lang),
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.75f)
-                            )
-                        }
+                        Text(
+                            text = AppStrings.defrostReminderLabel(lang),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
                     }
 
                     Switch(

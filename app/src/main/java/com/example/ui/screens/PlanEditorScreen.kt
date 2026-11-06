@@ -21,11 +21,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AcUnit
@@ -39,6 +44,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -56,6 +62,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -72,6 +81,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -124,6 +134,9 @@ fun PlanEditorScreen(
 ) {
     var isDirty by remember { mutableStateOf(false) }
     var showUnsavedDialog by remember { mutableStateOf(false) }
+
+    val listState = rememberLazyListState()
+    val coroutineScope = rememberCoroutineScope()
 
     val pendingNavigationTab by viewModel.pendingNavigationTab.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
@@ -183,6 +196,8 @@ fun PlanEditorScreen(
     var editingFoodTarget by remember { mutableStateOf<Triple<Int, MealType, FoodItemModel>?>(null) }
     // Alimento per la copia multi-giorno
     var copyingFoodTarget by remember { mutableStateOf<FoodItemModel?>(null) }
+    // Alimento per la conferma eliminazione via swipe a sinistra
+    var deletingFoodTarget by remember { mutableStateOf<Triple<Int, MealType, FoodItemModel>?>(null) }
     // Dialog copia intero giorno
     var showCopyDayDialog by remember { mutableStateOf(false) }
     // Dialog copia intero pasto (Target Meal)
@@ -445,15 +460,20 @@ fun PlanEditorScreen(
                         }
                     },
                     enabled = planTitle.isNotBlank() && isLoaded,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = CircleShape,
+                    contentPadding = PaddingValues(0.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
                     modifier = Modifier
                         .padding(end = 8.dp)
+                        .size(42.dp)
                         .testTag("btn_save_full_plan")
                 ) {
-                    Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(com.example.ui.i18n.AppStrings.save(currentLanguage), fontWeight = FontWeight.Bold)
+                    Icon(
+                        imageVector = Icons.Default.Save,
+                        contentDescription = com.example.ui.i18n.AppStrings.save(currentLanguage),
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(
@@ -469,6 +489,7 @@ fun PlanEditorScreen(
         }
 
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 80.dp)
         ) {
@@ -667,21 +688,30 @@ fun PlanEditorScreen(
 
                                 FilledTonalButton(
                                     onClick = {
-                                        inlineAddMealType = if (inlineAddMealType == mealWithItems.mealType) null else mealWithItems.mealType
+                                        val willOpen = inlineAddMealType != mealWithItems.mealType
+                                        inlineAddMealType = if (willOpen) mealWithItems.mealType else null
+                                        if (willOpen) {
+                                            val mealIdx = currentDayMeals.indexOfFirst { it.mealType == mealWithItems.mealType }
+                                            if (mealIdx >= 0) {
+                                                coroutineScope.launch {
+                                                    listState.animateScrollToItem(index = 2 + mealIdx)
+                                                }
+                                            }
+                                        }
                                     },
-                                    shape = RoundedCornerShape(10.dp),
-                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                    modifier = Modifier.testTag("btn_inline_add_${mealWithItems.mealType.name.lowercase()}")
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(0.dp),
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .testTag("btn_inline_add_${mealWithItems.mealType.name.lowercase()}")
                                 ) {
                                     Icon(
                                         imageVector = if (inlineAddMealType == mealWithItems.mealType) Icons.Default.Close else Icons.Default.Add,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = if (inlineAddMealType == mealWithItems.mealType) com.example.ui.i18n.AppStrings.close(currentLanguage) else com.example.ui.i18n.AppStrings.addExtraConfirm(currentLanguage),
-                                        fontSize = 12.sp
+                                        contentDescription = if (inlineAddMealType == mealWithItems.mealType)
+                                            com.example.ui.i18n.AppStrings.close(currentLanguage)
+                                        else
+                                            com.example.ui.i18n.AppStrings.addExtraConfirm(currentLanguage),
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
                             }
@@ -710,13 +740,7 @@ fun PlanEditorScreen(
                                     copyingFoodTarget = foodItem
                                 },
                                 onDelete = { foodItem ->
-                                    // Rimuovi elemento
-                                    val updatedList = mealWithItems.items.filter { it.id != foodItem.id }
-                                    val updatedMeals = currentDayMeals.map {
-                                        if (it.mealType == mealWithItems.mealType) it.copy(items = updatedList) else it
-                                    }
-                                    daysMealsMap[selectedDay] = updatedMeals
-                                    isDirty = true
+                                    deletingFoodTarget = Triple(selectedDay, mealWithItems.mealType, foodItem)
                                 }
                             )
                         }
@@ -803,6 +827,52 @@ fun PlanEditorScreen(
                 }
             )
         }
+
+        // Dialog di conferma eliminazione alimento invocata dallo swipe a sinistra
+        deletingFoodTarget?.let { (day, mealType, foodItem) ->
+            AlertDialog(
+                onDismissRequest = { deletingFoodTarget = null },
+                title = {
+                    Text(
+                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Conferma eliminazione" else "Confirm deletion",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Text(
+                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                            "Vuoi davvero eliminare l'alimento \"${com.example.ui.i18n.AppStrings.translateFoodName(foodItem.name, currentLanguage)}\" da ${mealType.getLocalizedName(currentLanguage)}?"
+                        else
+                            "Are you sure you want to delete \"${foodItem.name}\" from ${mealType.getLocalizedName(currentLanguage)}?"
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val dayMeals = daysMealsMap[day] ?: emptyList()
+                            val updatedMeals = dayMeals.map { meal ->
+                                if (meal.mealType == mealType) {
+                                    meal.copy(items = meal.items.filter { it.id != foodItem.id })
+                                } else {
+                                    meal
+                                }
+                            }
+                            daysMealsMap[day] = updatedMeals
+                            isDirty = true
+                            deletingFoodTarget = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
+                    ) {
+                        Text(com.example.ui.i18n.AppStrings.deleteFood(currentLanguage), color = Color.White)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { deletingFoodTarget = null }) {
+                        Text(com.example.ui.i18n.AppStrings.cancel(currentLanguage), color = Color.White)
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -855,136 +925,163 @@ fun InlineFoodItemRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable { onEdit() }
-            .testTag("food_item_${item.id}"),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        tonalElevation = 0.dp
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            // Controlli freccia Su e Giù per riordino fluido ed immediato
-            Column(
-                modifier = Modifier.padding(end = 4.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                IconButton(
-                    onClick = onMoveUp,
-                    enabled = canMoveUp,
-                    modifier = Modifier
-                        .size(26.dp)
-                        .testTag("btn_move_up_${item.id}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowUp,
-                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta su" else "Move up",
-                        tint = if (canMoveUp) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.size(20.dp)
-                    )
+    val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Swipe verso destra dalla metà in poi -> Copia alimento
+                    onCopy()
+                    false
                 }
-                IconButton(
-                    onClick = onMoveDown,
-                    enabled = canMoveDown,
-                    modifier = Modifier
-                        .size(26.dp)
-                        .testTag("btn_move_down_${item.id}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.KeyboardArrowDown,
-                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta giù" else "Move down",
-                        tint = if (canMoveDown) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
-                        modifier = Modifier.size(20.dp)
-                    )
+                SwipeToDismissBoxValue.EndToStart -> {
+                    // Swipe verso sinistra dalla metà in poi -> Chiede conferma eliminazione
+                    onDelete()
+                    false
                 }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isStartToEnd = direction == SwipeToDismissBoxValue.StartToEnd
+            val isEndToStart = direction == SwipeToDismissBoxValue.EndToStart
+            val backgroundColor = when {
+                isStartToEnd -> SagePrimary
+                isEndToStart -> TerracottaAccent
+                else -> Color.Transparent
+            }
+            val alignment = if (isStartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            val icon = if (isStartToEnd) Icons.Default.ContentCopy else Icons.Default.DeleteOutline
+            val text = if (isStartToEnd) {
+                if (lang == com.example.data.model.AppLanguage.IT) "Copia" else "Copy"
+            } else {
+                if (lang == com.example.data.model.AppLanguage.IT) "Elimina" else "Delete"
             }
 
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else String.format("%.1f", item.quantity)
-                    Text(
-                        text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 13.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "($qtyStr ${item.unit.getLocalizedShortName(lang)})",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.padding(top = 2.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    val factor = if (item.unit == QuantityUnit.GRAMS) item.quantity / 100.0 else item.quantity
-                    Text("${(item.calories * factor).toInt()} kcal", fontSize = 11.sp, color = SagePrimary, fontWeight = FontWeight.Bold)
-
-                    val category = FoodCategory.fromCategoryString(item.category) ?: FoodCategory.categorize(item.name)
-                    Text(
-                        text = "${category.iconEmoji} ${category.getLocalizedName(lang)}",
-                        fontSize = 10.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    if (item.toDefrost) {
-                        DefrostBadge()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(backgroundColor)
+                    .padding(horizontal = 16.dp),
+                contentAlignment = alignment
+            ) {
+                if (isStartToEnd || isEndToStart) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (isStartToEnd) {
+                            Icon(imageVector = icon, contentDescription = text, tint = Color.White)
+                            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        } else {
+                            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Icon(imageVector = icon, contentDescription = text, tint = Color.White)
+                        }
                     }
                 }
             }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(
-                    onClick = onCopy,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .testTag("btn_copy_food_${item.id}")
+        },
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .clickable { onEdit() }
+                .testTag("food_item_${item.id}"),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+            tonalElevation = 0.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Controlli freccia Su e Giù per riordino fluido ed immediato
+                Column(
+                    modifier = Modifier.padding(end = 6.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.ContentCopy,
-                        contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Copia alimento" else "Copy food",
-                        tint = SagePrimary,
-                        modifier = Modifier.size(17.dp)
-                    )
+                    IconButton(
+                        onClick = onMoveUp,
+                        enabled = canMoveUp,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .testTag("btn_move_up_${item.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowUp,
+                            contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta su" else "Move up",
+                            tint = if (canMoveUp) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    IconButton(
+                        onClick = onMoveDown,
+                        enabled = canMoveDown,
+                        modifier = Modifier
+                            .size(26.dp)
+                            .testTag("btn_move_down_${item.id}")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.KeyboardArrowDown,
+                            contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Sposta giù" else "Move down",
+                            tint = if (canMoveDown) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.25f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
 
-                IconButton(
-                    onClick = onEdit,
+                Column(
                     modifier = Modifier
-                        .size(32.dp)
-                        .testTag("btn_edit_food_${item.id}")
+                        .weight(1f)
+                        .padding(vertical = 4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Edit,
-                        contentDescription = com.example.ui.i18n.AppStrings.btnEdit(lang),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        val qtyStr = if (item.quantity % 1.0 == 0.0) item.quantity.toInt().toString() else String.format("%.1f", item.quantity)
+                        Text(
+                            text = com.example.ui.i18n.AppStrings.translateFoodName(item.name, lang),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "($qtyStr ${item.unit.getLocalizedShortName(lang)})",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier
-                        .size(32.dp)
-                        .testTag("btn_delete_food_${item.id}")
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.DeleteOutline,
-                        contentDescription = com.example.ui.i18n.AppStrings.deleteFood(lang),
-                        tint = TerracottaAccent,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(top = 2.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val factor = if (item.unit == QuantityUnit.GRAMS) item.quantity / 100.0 else item.quantity
+                        Text("${(item.calories * factor).toInt()} kcal", fontSize = 11.sp, color = SagePrimary, fontWeight = FontWeight.Bold)
+
+                        val category = FoodCategory.fromCategoryString(item.category) ?: FoodCategory.categorize(item.name)
+                        Text(
+                            text = "${category.iconEmoji} ${category.getLocalizedName(lang)}",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        if (item.toDefrost) {
+                            DefrostBadge()
+                        }
+                    }
                 }
             }
         }
@@ -1094,7 +1191,7 @@ fun EditFoodItemDialog(
                 // Campo Quantità e Stepper rapidi (+ / -)
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "${com.example.ui.i18n.AppStrings.quantityLabel(lang)} (${selectedUnit.getLocalizedShortName(lang)})",
+                        text = com.example.ui.i18n.AppStrings.quantityLabel(lang),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -1192,18 +1289,11 @@ fun EditFoodItemDialog(
                                 tint = CartaDaZucchero,
                                 modifier = Modifier.size(20.dp)
                             )
-                            Column {
-                                Text(
-                                    text = com.example.ui.i18n.AppStrings.defrostReminderLabel(lang),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    text = com.example.ui.i18n.AppStrings.defrostReminderSubtitle(lang),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                            Text(
+                                text = com.example.ui.i18n.AppStrings.defrostReminderLabel(lang),
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                         Switch(
                             checked = toDefrost,
@@ -1278,6 +1368,17 @@ fun InlineAddFoodForm(
 
     var showAllResults by remember { mutableStateOf(false) }
 
+    val focusRequester = remember { FocusRequester() }
+
+    LaunchedEffect(Unit) {
+        delay(250)
+        try {
+            focusRequester.requestFocus()
+        } catch (e: Exception) {
+            // Ignora se il componente è stato smontato
+        }
+    }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -1305,6 +1406,7 @@ fun InlineAddFoodForm(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
+                    .focusRequester(focusRequester)
                     .testTag("inline_search_input"),
                 label = { Text(com.example.ui.i18n.AppStrings.searchFoodPlaceholder(lang)) },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
@@ -1477,7 +1579,7 @@ fun InlineAddFoodForm(
                 OutlinedTextField(
                     value = quantityInput,
                     onValueChange = { quantityInput = it },
-                    label = { Text("${com.example.ui.i18n.AppStrings.quantityLabel(lang)} *") },
+                    label = { Text(com.example.ui.i18n.AppStrings.quantityLabel(lang)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.weight(1f),
                     singleLine = true,
@@ -1514,8 +1616,8 @@ fun InlineAddFoodForm(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (lang == com.example.data.model.AppLanguage.IT) "Da scongelare la sera prima (ore 20:00)" else "Defrost the evening before (8:00 PM)",
-                        fontSize = 12.sp
+                        text = com.example.ui.i18n.AppStrings.defrostReminderLabel(lang),
+                        fontSize = 13.sp
                     )
                 }
 

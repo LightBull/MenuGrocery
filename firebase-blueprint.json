@@ -1,0 +1,66 @@
+{
+  "entities": {
+    "userProfile": {
+      "title": "UserProfile",
+      "description": "User profile and subscription metadata",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Google User UID" },
+        "email": { "type": "string", "description": "User Google email address" },
+        "displayName": { "type": "string", "description": "User display name" },
+        "photoUrl": { "type": "string", "description": "User avatar URL" },
+        "subscriptionTier": { "type": "string", "enum": ["FREE", "PREMIUM"], "description": "Subscription tier" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Last update timestamp" }
+      },
+      "required": ["userId", "email"]
+    },
+    "mealPlan": {
+      "title": "MealPlan",
+      "description": "Weekly meal plan containing 7 days and daily meals",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique plan ID" },
+        "userId": { "type": "string", "description": "Owner Google User UID" },
+        "title": { "type": "string", "description": "Plan title" },
+        "notes": { "type": "string", "description": "Optional notes" },
+        "isActive": { "type": "boolean", "description": "Whether plan is currently active" },
+        "mealsJson": { "type": "string", "description": "JSON serialized days and meals content" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["id", "userId", "title", "isActive", "mealsJson"]
+    },
+    "shoppingItem": {
+      "title": "ShoppingItem",
+      "description": "Item in grocery shopping list",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique item ID" },
+        "userId": { "type": "string", "description": "Owner Google User UID" },
+        "foodName": { "type": "string", "description": "Name of food item" },
+        "category": { "type": "string", "description": "Category or supermarket aisle" },
+        "quantity": { "type": "number", "description": "Quantity amount" },
+        "unit": { "type": "string", "description": "Unit of measurement" },
+        "isPurchased": { "type": "boolean", "description": "Checklist purchased state" },
+        "isManualExtra": { "type": "boolean", "description": "Whether item was added manually" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Update timestamp" }
+      },
+      "required": ["id", "userId", "foodName", "category", "quantity", "unit", "isPurchased", "isManualExtra"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/userProfile" },
+      "description": "User profile document"
+    },
+    "/users/{userId}/meal_plans/{planId}": {
+      "schema": { "$ref": "#/entities/mealPlan" },
+      "description": "Meal plans belonging to authenticated user"
+    },
+    "/users/{userId}/shopping_items/{itemId}": {
+      "schema": { "$ref": "#/entities/shoppingItem" },
+      "description": "Shopping list items belonging to authenticated user"
+    }
+  }
+}

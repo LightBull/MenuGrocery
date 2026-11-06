@@ -27,9 +27,35 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 
+import android.app.Activity
+import com.example.data.auth.AuthRepository
+import com.example.data.model.SubscriptionTier
+import com.example.data.model.UserSubscriptionState
+import com.example.data.subscription.SubscriptionManager
+import com.google.firebase.auth.FirebaseUser
+
 class MealPlanViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MealPlanRepository
+    val authRepository: AuthRepository = AuthRepository(application)
+    val subscriptionManager: SubscriptionManager get() = repository.subscriptionManager
+    val subscriptionState: StateFlow<UserSubscriptionState> get() = subscriptionManager.subscriptionState
+    val currentUser: StateFlow<FirebaseUser?> get() = authRepository.currentUser
+
+    fun setSubscriptionTier(tier: SubscriptionTier) {
+        subscriptionManager.setTier(tier)
+    }
+
+    fun syncWithCloud(onComplete: (Int, Int) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            val result = repository.autoMergeWithCloud()
+            onComplete(result.first, result.second)
+        }
+    }
+
+    fun signOut(activity: Activity, onComplete: () -> Unit = {}) {
+        authRepository.signOut(viewModelScope, onComplete)
+    }
 
     val activePlan: StateFlow<MealPlanEntity?>
     val allPlans: StateFlow<List<MealPlanEntity>>

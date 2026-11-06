@@ -17,6 +17,10 @@ import com.example.data.model.AppLanguage
 import com.example.data.local.fooddb.FoodDatabase
 import com.example.data.local.fooddb.FoodSearchResult
 import com.example.notification.DefrostScheduler
+import com.example.data.subscription.SubscriptionManager
+import com.example.data.firestore.FirestoreSyncRepository
+import com.google.firebase.Firebase
+import com.google.firebase.auth.auth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -30,12 +34,20 @@ import java.util.UUID
 class MealPlanRepository(
     private val database: MealPlanDatabase,
     private val context: Context,
-    private val foodDatabase: FoodDatabase = FoodDatabase.getInstance(context)
+    private val foodDatabase: FoodDatabase = FoodDatabase.getInstance(context),
+    val subscriptionManager: SubscriptionManager = SubscriptionManager.getInstance(),
+    val firestoreSyncRepository: FirestoreSyncRepository = FirestoreSyncRepository(context)
 ) {
     private val mealPlanDao = database.mealPlanDao()
     private val mealDao = database.mealDao()
     private val mealFoodItemDao = database.mealFoodItemDao()
     private val shoppingListDao = database.shoppingListDao()
+
+    private fun isFirebaseSignedIn(): Boolean = try {
+        Firebase.auth.currentUser != null
+    } catch (e: Exception) {
+        false
+    }
 
     // --- Piani Alimentari ---
     fun getAllPlans(): Flow<List<MealPlanEntity>> = mealPlanDao.getAllPlans()
@@ -73,6 +85,15 @@ class MealPlanRepository(
             }
         }
         mealDao.insertMeals(mealsToCreate)
+
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.uploadMealPlan(plan, "[]")
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
+
         planId
     }
 
@@ -91,6 +112,13 @@ class MealPlanRepository(
 
     suspend fun deletePlan(plan: MealPlanEntity) = withContext(Dispatchers.IO) {
         mealPlanDao.deletePlan(plan)
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.deleteMealPlan(plan.id)
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
         // Se il piano eliminato era attivo o per sicurezza generale, risincronizza gli allarmi
         DefrostScheduler.resyncAllActiveDefrostReminders(context, database)
     }
@@ -343,10 +371,24 @@ class MealPlanRepository(
     suspend fun toggleItemPurchased(item: ShoppingListItemEntity) = withContext(Dispatchers.IO) {
         val newStatus = !item.isPurchased
         shoppingListDao.updatePurchasedStatus(item.id, newStatus)
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.updateShoppingItemPurchased(item.id, newStatus)
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
     }
 
     suspend fun setItemPurchased(id: String, isPurchased: Boolean) = withContext(Dispatchers.IO) {
         shoppingListDao.updatePurchasedStatus(id, isPurchased)
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.updateShoppingItemPurchased(id, isPurchased)
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
     }
 
     suspend fun addManualExtra(name: String, quantity: Double, unit: QuantityUnit) = withContext(Dispatchers.IO) {
@@ -363,10 +405,105 @@ class MealPlanRepository(
             category = FoodCategory.EXTRA_HOUSEHOLD.displayName
         )
         shoppingListDao.insertItem(item)
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.uploadShoppingItem(item)
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
     }
 
     suspend fun deleteShoppingItem(id: String) = withContext(Dispatchers.IO) {
         shoppingListDao.deleteItemById(id)
+        if (subscriptionManager.isCloudSyncActive() && isFirebaseSignedIn()) {
+            try {
+                firestoreSyncRepository.deleteShoppingItem(id)
+            } catch (e: Exception) {
+                // Ignore background sync errors
+            }
+        }
+    }
+
+    suspend fun autoMergeWithCloud(): Pair<Int, Int> = withContext(Dispatchers.IO) {
+        if (!subscriptionManager.isCloudSyncActive() || !isFirebaseSignedIn()) {
+            return@withContext Pair(0, 0)
+        }
+        var uploadedCount = 0
+        var downloadedCount = 0
+
+        try {
+            // 1. Upload local plans
+            val localPlans = mealPlanDao.getAllPlansSync()
+            for (plan in localPlans) {
+                firestoreSyncRepository.uploadMealPlan(plan, "[]")
+                uploadedCount++
+            }
+
+            // 2. Upload local shopping items
+            val localItems = shoppingListDao.getAllItemsSync()
+            for (item in localItems) {
+                firestoreSyncRepository.uploadShoppingItem(item)
+                uploadedCount++
+            }
+
+            // 3. Fetch remote plans and merge missing ones
+            val remotePlans = firestoreSyncRepository.fetchRemoteMealPlans()
+            for (remotePlan in remotePlans) {
+                val existing = mealPlanDao.getPlanById(remotePlan.id)
+                if (existing == null) {
+                    val newPlan = MealPlanEntity(
+                        id = remotePlan.id,
+                        title = remotePlan.title,
+                        isActive = remotePlan.isActive,
+                        createdAt = remotePlan.createdAt?.toDate()?.time ?: System.currentTimeMillis(),
+                        notes = remotePlan.notes.ifBlank { null }
+                    )
+                    mealPlanDao.insertPlan(newPlan)
+                    downloadedCount++
+                }
+            }
+
+            // 4. Fetch remote shopping items and merge missing ones
+            val remoteItems = firestoreSyncRepository.fetchRemoteShoppingItems()
+            for (remoteItem in remoteItems) {
+                val existing = shoppingListDao.getItemByIdSync(remoteItem.id)
+                if (existing == null) {
+                    val unitParsed = try {
+                        QuantityUnit.valueOf(remoteItem.unit)
+                    } catch (e: Exception) {
+                        QuantityUnit.GRAMS
+                    }
+                    val newItem = ShoppingListItemEntity(
+                        id = remoteItem.id,
+                        planId = null,
+                        name = remoteItem.foodName,
+                        quantity = remoteItem.quantity,
+                        unit = unitParsed,
+                        isPurchased = remoteItem.isPurchased,
+                        isManualExtra = remoteItem.isManualExtra,
+                        category = remoteItem.category
+                    )
+                    shoppingListDao.insertItem(newItem)
+                    downloadedCount++
+                }
+            }
+
+            // 5. Update user profile on Firestore
+            val user = try { Firebase.auth.currentUser } catch (e: Exception) { null }
+            if (user != null) {
+                firestoreSyncRepository.saveUserProfile(
+                    displayName = user.displayName,
+                    email = user.email,
+                    photoUrl = user.photoUrl?.toString(),
+                    tier = subscriptionManager.subscriptionState.value.tier.name
+                )
+            }
+        } catch (e: Exception) {
+            // Log merge error
+        }
+
+        Pair(uploadedCount, downloadedCount)
     }
 
     suspend fun clearShoppingList() = withContext(Dispatchers.IO) {

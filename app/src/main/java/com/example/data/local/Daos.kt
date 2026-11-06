@@ -14,6 +14,9 @@ interface MealPlanDao {
     @Query("SELECT * FROM meal_plans ORDER BY createdAt DESC")
     fun getAllPlans(): Flow<List<MealPlanEntity>>
 
+    @Query("SELECT * FROM meal_plans ORDER BY createdAt DESC")
+    suspend fun getAllPlansSync(): List<MealPlanEntity>
+
     @Query("SELECT * FROM meal_plans WHERE isActive = 1 LIMIT 1")
     fun getActivePlan(): Flow<MealPlanEntity?>
 
@@ -116,6 +119,9 @@ interface ShoppingListDao {
 
     @Query("SELECT * FROM shopping_list_items")
     suspend fun getAllItemsSync(): List<ShoppingListItemEntity>
+
+    @Query("SELECT * FROM shopping_list_items WHERE id = :id LIMIT 1")
+    suspend fun getItemByIdSync(id: String): ShoppingListItemEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertItem(item: ShoppingListItemEntity)

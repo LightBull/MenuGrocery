@@ -60,6 +60,16 @@ import androidx.compose.material3.TopAppBarDefaults
 import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 import com.example.ui.viewmodel.MealPlanViewModel
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import com.example.data.model.SubscriptionTier
+import com.example.ui.screens.AuthScreen
+import com.example.ui.screens.SettingsScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -78,6 +88,8 @@ class MainActivity : ComponentActivity() {
 fun MealPlanAppRoot(
     viewModel: MealPlanViewModel = viewModel()
 ) {
+    val currentUser by viewModel.currentUser.collectAsState()
+    val subscriptionState by viewModel.subscriptionState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     var showSettings by remember { mutableStateOf(false) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -85,6 +97,27 @@ fun MealPlanAppRoot(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     val isEditorDirty by viewModel.isEditorDirty.collectAsState()
+
+    // Flag per disattivazione temporanea login e sincronizzazione cloud (attivabile in futuro)
+    val cloudAndLoginEnabled = false
+
+    // Tentativo di auto sign-in all'avvio dell'app (solo se abilitato)
+    LaunchedEffect(Unit) {
+        if (cloudAndLoginEnabled) {
+            viewModel.authRepository.attemptSilentAutoSignIn()
+        }
+    }
+
+    // Auth Gate: Se disattivato, accede direttamente all'app in modalità locale
+    if (cloudAndLoginEnabled && currentUser == null) {
+        AuthScreen(
+            viewModel = viewModel,
+            onAuthSuccess = {
+                // Successo: l'utente approda alla home
+            }
+        )
+        return
+    }
 
     val handleTabSelection = { targetTab: Int ->
         showSettings = false
@@ -146,6 +179,24 @@ fun MealPlanAppRoot(
                         )
                     },
                     actions = {
+                        if (cloudAndLoginEnabled) {
+                            val isCloud = subscriptionState.tier == SubscriptionTier.PREMIUM
+                            IconButton(
+                                onClick = { showSettings = true },
+                                modifier = Modifier.testTag("topbar_btn_cloud_status")
+                            ) {
+                                Icon(
+                                    imageVector = if (isCloud) Icons.Default.CloudDone else Icons.Default.CloudOff,
+                                    contentDescription = if (isCloud)
+                                        com.example.ui.i18n.AppStrings.cloudSyncStatusSynced(currentLanguage)
+                                    else
+                                        com.example.ui.i18n.AppStrings.cloudSyncStatusLocal(currentLanguage),
+                                    tint = if (isCloud) SagePrimary else Color.White.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                        }
+
                         IconButton(
                             onClick = { showSettings = true },
                             modifier = Modifier.testTag("topbar_btn_settings")

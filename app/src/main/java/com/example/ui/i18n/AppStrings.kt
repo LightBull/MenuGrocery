@@ -165,8 +165,8 @@ object AppStrings {
     }
 
     fun quantityLabel(lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> "Quantità"
-        AppLanguage.EN -> "Quantity"
+        AppLanguage.IT -> "Qta"
+        AppLanguage.EN -> "Qty"
     }
 
     fun unitLabel(lang: AppLanguage): String = when (lang) {
@@ -175,13 +175,13 @@ object AppStrings {
     }
 
     fun defrostReminderLabel(lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> "Notifica scongelamento (giorno prima)"
-        AppLanguage.EN -> "Defrost reminder (day before)"
+        AppLanguage.IT -> "Scongelamento"
+        AppLanguage.EN -> "Defrost"
     }
 
     fun defrostReminderSubtitle(lang: AppLanguage): String = when (lang) {
-        AppLanguage.IT -> "Avviso push alle ore 20:00 del giorno precedente"
-        AppLanguage.EN -> "Push alert at 8:00 PM the previous day"
+        AppLanguage.IT -> "Avviso push del giorno precedente"
+        AppLanguage.EN -> "Push alert the previous day"
     }
 
     fun addFoodToMeal(lang: AppLanguage, mealName: String): String = when (lang) {
@@ -696,4 +696,183 @@ object AppStrings {
             else -> "D$day"
         }
     }
+
+    // --- Autenticazione & Login ---
+    fun authScreenTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Benvenuto in Meal Planner"
+        AppLanguage.EN -> "Welcome to Meal Planner"
+    }
+
+    fun authScreenSubtitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Pianifica i tuoi pasti, organizza la spesa e sincronizza tutto sul cloud."
+        AppLanguage.EN -> "Plan your meals, organize groceries, and sync everything to the cloud."
+    }
+
+    fun authBenefit1(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Sincronizzazione Cloud Automatica"
+        AppLanguage.EN -> "Automatic Cloud Synchronization"
+    }
+
+    fun authBenefit1Desc(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "I tuoi piani settimanali e la lista della spesa sempre al sicuro e aggiornati."
+        AppLanguage.EN -> "Your weekly plans and grocery lists are always secure and up-to-date."
+    }
+
+    fun authBenefit2(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accesso Multi-Dispositivo"
+        AppLanguage.EN -> "Multi-Device Access"
+    }
+
+    fun authBenefit2Desc(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accedi da qualsiasi telefono o tablet con il tuo account Google."
+        AppLanguage.EN -> "Sign in from any phone or tablet with your Google account."
+    }
+
+    fun authBenefit3(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Archivio Alimenti & Notifiche Scongelamento"
+        AppLanguage.EN -> "Food Database & Defrost Reminders"
+    }
+
+    fun authBenefit3Desc(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Oltre 14.000 alimenti con macronutrienti e notifiche push la sera prima."
+        AppLanguage.EN -> "14,000+ foods with macronutrients and push reminders the evening before."
+    }
+
+    fun signInWithGoogleButton(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accedi con Google"
+        AppLanguage.EN -> "Sign in with Google"
+    }
+
+    fun signingIn(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accesso in corso..."
+        AppLanguage.EN -> "Signing in..."
+    }
+
+    fun signOut(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Disconnetti"
+        AppLanguage.EN -> "Sign Out"
+    }
+
+    fun accountProfileTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Account Collegato"
+        AppLanguage.EN -> "Connected Account"
+    }
+
+    // --- Abbonamento Cloud & Entitlements ---
+    fun subscriptionSectionTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Pacchetto Cloud & Abbonamento"
+        AppLanguage.EN -> "Cloud Package & Subscription"
+    }
+
+    fun subscriptionSectionSubtitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Gestione dei vantaggi cloud e sincronizzazione Firestore"
+        AppLanguage.EN -> "Manage cloud benefits and Firestore synchronization"
+    }
+
+    fun subscriptionStatusActive(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Abbonamento Cloud Attivo"
+        AppLanguage.EN -> "Cloud Subscription Active"
+    }
+
+    fun subscriptionStatusFree(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modalità Base (Solo Locale)"
+        AppLanguage.EN -> "Basic Mode (Local Only)"
+    }
+
+    fun subscriptionSimulatedBadge(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Simulazione attiva (Accesso Completo)"
+        AppLanguage.EN -> "Simulation active (Full Access)"
+    }
+
+    fun subscriptionSimulatedDesc(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Questa funzionalità in futuro richiederà un pacchetto a pagamento. Attualmente l'accesso è simulato come abilitato per consentire i test."
+        AppLanguage.EN -> "This feature will require a paid package in the future. Access is currently simulated as enabled to allow testing."
+    }
+
+    fun subscriptionToggleTitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Simula Abbonamento Cloud"
+        AppLanguage.EN -> "Simulate Cloud Subscription"
+    }
+
+    fun subscriptionToggleSubtitle(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Attiva/disattiva per testare il funzionamento cloud vs locale"
+        AppLanguage.EN -> "Toggle to test cloud vs local behavior"
+    }
+
+    fun cloudSyncStatusSynced(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Cloud Sincronizzato"
+        AppLanguage.EN -> "Cloud Synced"
+    }
+
+    fun cloudSyncStatusLocal(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Modalità Locale"
+        AppLanguage.EN -> "Local Mode"
+    }
+
+    // --- Autenticazione Email/Password ---
+    fun tabSignIn(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accedi"
+        AppLanguage.EN -> "Sign In"
+    }
+
+    fun tabSignUp(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Registrati"
+        AppLanguage.EN -> "Register"
+    }
+
+    fun emailLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Email"
+        AppLanguage.EN -> "Email"
+    }
+
+    fun passwordLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Password"
+        AppLanguage.EN -> "Password"
+    }
+
+    fun confirmPasswordLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Conferma Password"
+        AppLanguage.EN -> "Confirm Password"
+    }
+
+    fun displayNameLabel(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Nome (facoltativo)"
+        AppLanguage.EN -> "Name (optional)"
+    }
+
+    fun btnSignInEmail(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Accedi con Email"
+        AppLanguage.EN -> "Sign In with Email"
+    }
+
+    fun btnSignUpEmail(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Crea Account e Accedi"
+        AppLanguage.EN -> "Create Account & Sign In"
+    }
+
+    fun orDivider(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "oppure"
+        AppLanguage.EN -> "or"
+    }
+
+    fun googleSignInButton(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Continua con Google"
+        AppLanguage.EN -> "Continue with Google"
+    }
+
+    fun errorInvalidEmail(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Inserisci un indirizzo email valido"
+        AppLanguage.EN -> "Please enter a valid email address"
+    }
+
+    fun errorShortPassword(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "La password deve contenere almeno 6 caratteri"
+        AppLanguage.EN -> "Password must contain at least 6 characters"
+    }
+
+    fun errorPasswordMismatch(lang: AppLanguage): String = when (lang) {
+        AppLanguage.IT -> "Le password non coincidono"
+        AppLanguage.EN -> "Passwords do not match"
+    }
 }
+
