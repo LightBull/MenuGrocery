@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.mealplan.rkfpw"
     minSdk = 24
     targetSdk = 36
-    versionCode = 11
-    versionName = "11.0"
+    versionCode = 12
+    versionName = "12.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -115,6 +115,7 @@ dependencies {
   implementation(libs.androidx.credentials.play.services)
   implementation(libs.googleid)
   implementation(libs.onnxruntime.android)
+  implementation(libs.play.app.update)
 
   implementation(libs.firebase.appcheck.recaptcha)
   implementation(libs.firebase.appcheck.debug)

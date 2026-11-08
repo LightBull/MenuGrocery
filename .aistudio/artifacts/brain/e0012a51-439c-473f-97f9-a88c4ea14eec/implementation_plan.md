@@ -1,56 +1,56 @@
-# Ottimizzazione UX Schermate Piani e Modifica Pasti
+# Controllo Aggiornamenti all'Avvio e Presentazione Novità
 
-Questo aggiornamento rimuove la card informativa introduttiva nella schermata "I miei piani", elimina la TopAppBar principale (con titolo e icona impostazioni) durante la creazione e modifica del piano alimentare lasciando spazio alla barra nativa dell'editor, e implementa lo scorrimento automatico fluido sul pasto correntemente attivo una volta inserito un nuovo alimento.
+Implementazione del controllo automatico della disponibilità di aggiornamenti all'avvio dell'applicazione tramite la libreria ufficiale Google Play In-App Update, con presentazione di un dialog Material 3 contenente l'elenco delle novità introdotte, la possibilità di posticipare l'aggiornamento e il reindirizzamento diretto a Google Play Store.
 
 ### User Review & Critical Decisions
 
 > [!IMPORTANT]
-> Le seguenti preferenze confermate nella fase di chiarimento guidano l'architettura della soluzione:
+> Le seguenti scelte confermate nella fase di chiarimento guidano l'architettura:
 
-- **Barra di navigazione inferiore**: Rimane visibile per garantire la coerenza di navigazione tra le sezioni principali dell'applicazione.
-- **TopAppBar in Creazione/Modifica Piano**: Viene nascosta la barra superiore dell'applicazione (titolo "I miei piani" + tasto impostazioni), lasciando attiva esclusivamente la TopAppBar contestuale dell'editor (pulsante indietro "←" e pulsante salva).
-- **Comportamento di scorrimento sul pasto**: Scorrimento fluido e animato (`animateScrollToItem`) all'inizio della scheda del pasto attivo immediatamente dopo l'inserimento dell'alimento e la chiusura della form di ricerca.
+- **Sorgente di rilevamento aggiornamenti**: Utilizzo dell'API ufficiale `com.google.android.play:app-update-ktx` (`AppUpdateManager`) che interroga direttamente Google Play Store.
+- **Azione di aggiornamento**: Il pulsante "Aggiorna ora" apre direttamente la scheda dell'app sul Google Play Store (`market://details?id=com.aistudio.mealplan.rkfpw` con fallback su URL web).
+- **Esperienza utente (UX)**: Dialog Material 3 non bloccante con elenco dettagliato delle novità introdotte ("Cosa c'è di nuovo") e pulsante "Più tardi" per consentire all'utente di posticipare senza forzature.
 
 ---
 
 ### 1. Overview & Core Concept
 
 - **Cosa fa**:
-  1. Nella scheda **"I miei piani"**, elimina la card statica "I Miei piani alimentari" in cima alla lista per mostrare immediatamente i piani disponibili in modo compatto e pulito.
-  2. Nella schermata di **Creazione / Modifica del piano** (`PlanEditorScreen`), maschera la `TopAppBar` globale dell'applicazione (`MainActivity`) evitando la duplicazione di barre di stato e rimuovendo il pulsante impostazioni non pertinente durante l'editing.
-  3. Mantiene uno stato del **pasto attivo** (`activeMealType`): al tocco di "+ Aggiungi" su un pasto (es. Pranzo), quel pasto diventa attivo fino alla selezione esplicita di un pasto diverso. Al completamento dell'aggiunta dell'alimento e chiusura della form espandibile, la vista esegue uno scorrimento animato verso la scheda del pasto attivo, posizionando l'utente direttamente sui comandi del pasto senza disorientamenti.
-- **Valore per l'utente**: Eliminazione di attriti visivi e operativi durante l'inserimento continuativo di alimenti nei pasti del piano settimanale.
+  1. All'avvio dell'applicazione (`MainActivity`), un gestore dedicato interroga l'`AppUpdateManager` per verificare se Google Play segnala un aggiornamento disponibile (`UpdateAvailability.UPDATE_AVAILABLE`).
+  2. In caso positivo, mostra un dialog elegante e informativo che evidenzia la versione disponibile e l'elenco puntato delle novità introdotte.
+  3. L'utente può premere **"Aggiorna ora"** per accedere immediatamente a Google Play Store e completare l'update, oppure **"Più tardi"** per continuare ad utilizzare l'app.
+  4. Nella schermata delle impostazioni (`SettingsScreen`), aggiunge la voce interattiva **"Verifica aggiornamenti"** con visualizzazione della cronologia delle versioni e delle novità della versione attuale.
+- **Valore per l'utente**: Gli utenti rimangono sempre informati sui miglioramenti, le correzioni e le nuove funzionalità dell'app, potendo aggiornare con un solo tocco senza attriti.
 
 ---
 
 ### 2. User Experience & Visual Design
 
-- **Flusso "I miei piani"**:
-  - L'utente apre la tab "Piani": visualizza immediatamente la lista a scorrimento con i piani salvati e il badge del piano attivo, senza ingombri introduttivi.
-- **Flusso "Creazione / Modifica Piano"**:
-  - L'utente tocca un piano o il FAB "+": la TopAppBar di sistema dell'app scompare istantaneamente. Viene mostrata solo la barra dell'editor con la freccia indietro, il titolo "Nuovo piano / Modifica piano" e l'azione rapida "Salva".
-  - La barra inferiore con le tab rimane accessibile sul fondo.
-- **Flusso Aggiunta Alimento & Focus Automatico**:
-  - L'utente tocca "+" su "Pranzo": la form di inserimento rapido si apre nel pasto e il sistema memorizza "Pranzo" come pasto corrente.
-  - L'utente digita o seleziona un alimento e preme "Aggiungi al pasto":
-    1. L'alimento viene aggiunto alla lista degli alimenti del pasto corrente.
-    2. La form di ricerca si chiude.
-    3. Il `LazyListState` attiva uno scorrimento animato che ricentra la card "Pranzo" in cima al viewport.
-    4. L'utente ritrova immediatamente il pasto senza essere spinto visivamente sulla cena o sui pasti successivi a causa della contrazione della form.
+- **Flusso all'Avvio**:
+  - `LaunchedEffect(Unit)` in `MainActivity` avvia la verifica asincrona in background.
+  - Se è presente un aggiornamento, compare il dialog con animazione fluida.
+- **Design del Dialog di Aggiornamento (`AppUpdateDialog`)**:
+  - **Icona di testa**: Icona circolare con `Icons.Default.SystemUpdate` in contenitore tonale primario (SagePrimary).
+  - **Titolo**: "Aggiornamento Disponibile" con indicazione del numero di versione (es. "Versione 11.0").
+  - **Sezione Novità**: Card racchiusa con elenco puntato chiaro e icone di spunta/badge per ogni novità (es. ottimizzazione piano pasti, gestione scorrimento, nuova interfaccia editor).
+  - **Pulsanti di azione**:
+    - `Button` in stile riempito primario: "Aggiorna ora" (icona Play Store / download).
+    - `TextButton`: "Più tardi" (chiude il dialog e memorizza la scelta della sessione).
+- **Integrazione in Impostazioni (`SettingsScreen`)**:
+  - Sezione informativa arricchita con stato "L'app è aggiornata (v11.0)" e pulsante per rieseguire la verifica manuale o consultare il changelog delle ultime versioni.
 
 ---
 
 ### 3. Key Product Decisions & Trade-Offs
 
-- **Decisione 1: Tracciamento dello stato Editor nel ViewModel (`isPlanEditorOpen`)**:
-  - *Approccio scelto*: Aggiunta di `isPlanEditorOpen: StateFlow<Boolean>` in `MealPlanViewModel`, attivato/disattivato da `PlanEditorScreen` tramite `DisposableEffect`.
-  - *Perché*: `MainActivity` osserva reattivamente questo stato e nasconde la TopAppBar globale (`!showSettings && !isPlanEditorOpen`) in modo pulito e disaccoppiato, senza dover passare lambda nidificate su più livelli di composable.
-- **Decisione 2: Stato `activeMealType` persistito a livello di sessione editor**:
-  - *Approccio scelto*: Memorizzazione del `MealType` cliccato in una variabile di stato `activeMealType` che non si azzera alla chiusura della form, ma solo quando l'utente tocca esplicitamente un pasto differente o cambia giorno.
-  - *Perché*: Risponde fedelmente alla specifica dell'utente: *"ogni prima volta che viene cliccato l'aggiungi in un pasto attiva di fatto il pasto corrente finchè non viene cliccato l'aggiungi in un nuovo pasto lo stato non cambia"*.
-- **Decisione 3: Timing dello scorrimento animato**:
-  - *Approccio scelto*: Coroutine con leggero ritardo (circa 80-100ms) al trigger di chiusura per consentire a Compose di ricalcolare l'altezza contratta della lista prima di animare lo scroll all'indice del pasto (`2 + mealIndex`).
-  - *Perché*: Evita salti di rendering e garantisce che lo scorrimento porti la vista al punto esatto.
+- **Decisione 1: Libreria ufficiale `app-update-ktx`**:
+  - *Approccio scelto*: Aggiunta di `com.google.android.play:app-update-ktx:2.1.0` in `libs.versions.toml` e `app/build.gradle.kts`.
+  - *Perché*: È lo standard raccomandato da Google per le app distribuite su Play Store; gestisce la cache, la compatibilità dei dispositivi e le quote in modo nativo.
+- **Decisione 2: Gestione sicura per esecuzione locale/emulatore**:
+  - *Approccio scelto*: Gestione con `addOnFailureListener` e try/catch silenzioso: se l'app è in esecuzione in ambiente di sviluppo (dove Play Store non è collegato), l'app non va in crash ma prosegue normalmente.
+- **Decisione 3: Provider locale delle note di rilascio (`AppReleaseNotesProvider`)**:
+  - *Approccio scelto*: Componente modulare che associa i numeri di versione (v11.0, v10.0, ecc.) alle relative note di rilascio localizzate in italiano e inglese.
+  - *Perché*: L'API Play Store non restituisce il testo formattato del changelog all'interno del client; questo provider garantisce una presentazione visiva ricca e coerente con il design dell'app.
 
 ---
 
@@ -59,37 +59,48 @@ Questo aggiornamento rimuove la card informativa introduttiva nella schermata "I
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                        MainActivity                         │
-│  - Observes: isPlanEditorOpen from ViewModel                │
-│  - Condition: if (!showSettings && !isPlanEditorOpen)       │
-│    TopAppBar(title, settingsButton)                         │
+│  - LaunchedEffect(Unit): AppUpdateHelper.checkForUpdate()   │
+│  - State: showUpdateDialog (version, releaseNotes)          │
 └──────────────────────────────┬──────────────────────────────┘
                                │
             ┌──────────────────┴──────────────────┐
             ▼                                     ▼
 ┌───────────────────────────────┐   ┌───────────────────────────┐
-│  MealPlansManagementScreen    │   │      PlanEditorScreen     │
-│  - Removed intro Surface card │   │  - Own dedicated header   │
-│  - Shows only plan cards + FAB│   │  - State: activeMealType  │
-└───────────────────────────────┘   │  - Auto-scroll coroutine  │
-                                    └───────────────────────────┘
+│       AppUpdateManager        │   │  AppReleaseNotesProvider  │
+│  - Play Core API check        │   │  - Localized changelog    │
+│  - UPDATE_AVAILABLE listener  │   │  - Highlights per version │
+└───────────────┬───────────────┘   └─────────────┬─────────────┘
+                │                                 │
+                └────────────────┬────────────────┘
+                                 ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      AppUpdateDialog                        │
+│  - M3 Dialog displaying "Cosa c'è di nuovo"                │
+│  - Actions: "Aggiorna ora" (Play Store Intent) & "Più tardi"│
+└─────────────────────────────────────────────────────────────┘
 ```
 
-#### Modifiche ai Componenti:
+#### Modifiche ai File:
 
-1. **`MealPlanViewModel.kt`**:
-   - `_isPlanEditorOpen = MutableStateFlow(false)`
-   - `val isPlanEditorOpen: StateFlow<Boolean> = _isPlanEditorOpen.asStateFlow()`
-   - `fun setPlanEditorOpen(open: Boolean)`
+1. **`gradle/libs.versions.toml`**:
+   - Versione `playAppUpdate = "2.1.0"`
+   - Dipendenza `play-app-update = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "playAppUpdate" }`
 
-2. **`MainActivity.kt`**:
-   - `val isPlanEditorOpen by viewModel.isPlanEditorOpen.collectAsState()`
-   - Condizione `topBar`: `if (!showSettings && !isPlanEditorOpen)`
+2. **`app/build.gradle.kts`**:
+   - Aggiunta di `implementation(libs.play.app.update)` nel blocco `dependencies`.
 
-3. **`MealPlansManagementScreen.kt`**:
-   - Rimozione completa del blocco `item { Surface(...) { ... myPlansTitle ... } }` all'interno della `LazyColumn`.
+3. **`com.example.util.AppUpdateManager.kt`**:
+   - Classe helper per interagire con `AppUpdateManager` di Google Play.
+   - Fornisce funzioni per avviare il controllo, ottenere lo stato e lanciare l'Intent per Google Play Store (`market://details?id=...`).
 
-4. **`PlanEditorScreen.kt`**:
-   - `DisposableEffect` per impostare `viewModel.setPlanEditorOpen(true)` all'avvio e `false` su `onDispose`.
-   - Gestione di `activeMealType: MealType?`.
-   - Nel pulsante inline `+`: assegnazione `activeMealType = mealWithItems.mealType`.
-   - In `onConfirmAdd`: chiusura form, ricalcolo posizionamento del pasto attivo con `currentDayMeals.indexOfFirst { it.mealType == targetMeal }` e chiamata a `listState.animateScrollToItem(index = 2 + targetIdx)`.
+4. **`com.example.data.model.AppReleaseNotes.kt`**:
+   - Modello dati per le versioni e le relative novità introdotte (con supporto bilingue IT/EN).
+
+5. **`com.example.ui.components.AppUpdateDialog.kt`**:
+   - Composable M3 per il dialog informativo delle novità con layout curato.
+
+6. **`com.example.MainActivity.kt`**:
+   - Invocazione del controllo all'avvio e gestione dello stato di visualizzazione del dialog.
+
+7. **`com.example.ui.screens.SettingsScreen.kt`**:
+   - Aggiunta della voce per il controllo manuale degli aggiornamenti e visualizzazione delle note di rilascio.

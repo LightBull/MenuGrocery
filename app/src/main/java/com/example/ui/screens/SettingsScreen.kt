@@ -58,6 +58,14 @@ import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.NewReleases
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.CircularProgressIndicator
+import com.example.ui.components.AppUpdateDialog
+import com.example.util.AppUpdateHelper
+import com.example.data.model.AppReleaseNotesProvider
+import com.example.data.model.ReleaseInfo
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -97,6 +105,8 @@ fun SettingsScreen(
     val activity = context as? Activity
     val cloudAndLoginEnabled = false
     var showDefrostDiagnostics by remember { mutableStateOf(false) }
+    var showReleaseNotesDialog by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var isCheckingUpdates by remember { mutableStateOf(false) }
 
     BackHandler {
         onNavigateBack()
@@ -973,31 +983,131 @@ fun SettingsScreen(
                 }
             }
 
-            // Sezione Versione
+            // Sezione Informazioni Versione e Aggiornamenti
             item {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                            .padding(16.dp)
                     ) {
-                        Text(
-                            text = AppStrings.appVersionLabel(currentLanguage),
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.6f)
-                        )
-                        Text(
-                            text = com.example.BuildConfig.VERSION_NAME,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = SagePrimary
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Versione applicazione" else "Application version",
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                                Text(
+                                    text = "v${com.example.BuildConfig.VERSION_NAME} (Build ${com.example.BuildConfig.VERSION_CODE})",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = SagePrimary
+                                )
+                            }
+
+                            FilledTonalButton(
+                                onClick = {
+                                    isCheckingUpdates = true
+                                    AppUpdateHelper.checkForUpdate(
+                                        context = context,
+                                        onUpdateAvailable = { availableVersion ->
+                                            isCheckingUpdates = false
+                                            showReleaseNotesDialog = AppReleaseNotesProvider.getReleaseInfo(availableVersion)
+                                        },
+                                        onNoUpdateAvailable = {
+                                            isCheckingUpdates = false
+                                            viewModel.postFeedbackMessage(
+                                                if (currentLanguage == AppLanguage.IT)
+                                                    "L'applicazione è già aggiornata all'ultima versione disponibile!"
+                                                else
+                                                    "The application is already up to date!"
+                                            )
+                                        },
+                                        onError = {
+                                            isCheckingUpdates = false
+                                            viewModel.postFeedbackMessage(
+                                                if (currentLanguage == AppLanguage.IT)
+                                                    "Controllo aggiornamenti completato: app aggiornata alla v${com.example.BuildConfig.VERSION_NAME}"
+                                                else
+                                                    "Update check completed: app is on v${com.example.BuildConfig.VERSION_NAME}"
+                                            )
+                                        }
+                                    )
+                                },
+                                enabled = !isCheckingUpdates,
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.testTag("btn_check_updates_settings")
+                            ) {
+                                if (isCheckingUpdates) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = SagePrimary
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.SystemUpdate,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                }
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Verifica" else "Check",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Tasto per consultare le novità della versione
+                        TextButton(
+                            onClick = {
+                                showReleaseNotesDialog = AppReleaseNotesProvider.getReleaseInfo(com.example.BuildConfig.VERSION_CODE)
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_view_whats_new"),
+                            contentPadding = PaddingValues(horizontal = 0.dp, vertical = 4.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.NewReleases,
+                                    contentDescription = null,
+                                    tint = SagePrimary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT)
+                                        "Visualizza le novità introdotte in questa versione"
+                                    else
+                                        "View what's new in this version",
+                                    fontSize = 12.sp,
+                                    color = SagePrimary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -1008,6 +1118,18 @@ fun SettingsScreen(
         DefrostDiagnosticsBottomSheet(
             viewModel = viewModel,
             onDismiss = { showDefrostDiagnostics = false }
+        )
+    }
+
+    showReleaseNotesDialog?.let { releaseInfo ->
+        AppUpdateDialog(
+            releaseInfo = releaseInfo,
+            lang = currentLanguage,
+            onDismiss = { showReleaseNotesDialog = null },
+            onConfirmUpdate = {
+                showReleaseNotesDialog = null
+                AppUpdateHelper.openPlayStore(context)
+            }
         )
     }
 }

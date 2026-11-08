@@ -99,6 +99,20 @@ fun MealPlanAppRoot(
     val isEditorDirty by viewModel.isEditorDirty.collectAsState()
     val isPlanEditorOpen by viewModel.isPlanEditorOpen.collectAsState()
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var availableUpdateInfo by remember { mutableStateOf<com.example.data.model.ReleaseInfo?>(null) }
+
+    // Controllo automatico disponibilità aggiornamenti all'avvio dell'app
+    LaunchedEffect(Unit) {
+        com.example.util.AppUpdateHelper.checkForUpdate(
+            context = context,
+            onUpdateAvailable = { availableVersionCode ->
+                val release = com.example.data.model.AppReleaseNotesProvider.getReleaseInfo(availableVersionCode)
+                availableUpdateInfo = release
+            }
+        )
+    }
+
     // Flag per disattivazione temporanea login e sincronizzazione cloud (attivabile in futuro)
     val cloudAndLoginEnabled = false
 
@@ -318,5 +332,18 @@ fun MealPlanAppRoot(
                 }
             }
         }
+    }
+
+    // Dialog informativo aggiornamento disponibile con elenco novità
+    availableUpdateInfo?.let { releaseInfo ->
+        com.example.ui.components.AppUpdateDialog(
+            releaseInfo = releaseInfo,
+            lang = currentLanguage,
+            onDismiss = { availableUpdateInfo = null },
+            onConfirmUpdate = {
+                availableUpdateInfo = null
+                com.example.util.AppUpdateHelper.openPlayStore(context)
+            }
+        )
     }
 }

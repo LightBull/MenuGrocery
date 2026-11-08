@@ -1,6 +1,6 @@
 {
-  "summary":  "Piano di implementazione per la rimozione della card introduttiva in 'I miei piani', la rimozione della TopAppBar principale in 'Crea/Modifica Piano' e il riposizionamento automatico fluido sul pasto attivo dopo l'inserimento di un alimento.",
-  "updatedAt":  "2026-11-08T18:45:13.668906946Z",
+  "summary":  "Piano di implementazione per il controllo automatico degli aggiornamenti all'avvio tramite Google Play In-App Update API con dialog informativo delle novità introdotte e link al Play Store.",
+  "updatedAt":  "2026-11-08T19:18:01.848176765Z",
   "requestFeedback":  true,
   "userFacing":  true
 }
