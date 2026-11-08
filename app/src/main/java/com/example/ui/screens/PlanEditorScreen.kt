@@ -148,7 +148,9 @@ fun PlanEditorScreen(
     }
 
     DisposableEffect(Unit) {
+        viewModel.setPlanEditorOpen(true)
         onDispose {
+            viewModel.setPlanEditorOpen(false)
             viewModel.setEditorDirty(false)
             viewModel.clearPendingNavigationTab()
         }
@@ -193,6 +195,8 @@ fun PlanEditorScreen(
 
     // Quale pasto ha attualmente il form di aggiunta inline aperto (null = nessuno)
     var inlineAddMealType by remember { mutableStateOf<MealType?>(null) }
+    // Pasto correntemente attivo: attivato alla prima pressione di aggiunta, mantenuto finché non si cambia pasto
+    var activeMealType by remember { mutableStateOf<MealType?>(null) }
     // Alimento attualmente in fase di modifica: Triple(dayOfWeek, mealType, foodItem)
     var editingFoodTarget by remember { mutableStateOf<Triple<Int, MealType, FoodItemModel>?>(null) }
     // Alimento per la copia multi-giorno
@@ -569,6 +573,7 @@ fun PlanEditorScreen(
                         onDaySelected = {
                             selectedDay = it
                             inlineAddMealType = null // Chiudi eventuale form inline
+                            activeMealType = null // Reset pasto attivo per il nuovo giorno
                         },
                         lang = currentLanguage
                     )
@@ -692,6 +697,7 @@ fun PlanEditorScreen(
                                         val willOpen = inlineAddMealType != mealWithItems.mealType
                                         inlineAddMealType = if (willOpen) mealWithItems.mealType else null
                                         if (willOpen) {
+                                            activeMealType = mealWithItems.mealType
                                             val mealIdx = currentDayMeals.indexOfFirst { it.mealType == mealWithItems.mealType }
                                             if (mealIdx >= 0) {
                                                 coroutineScope.launch {
@@ -795,10 +801,30 @@ fun PlanEditorScreen(
                                         isDirty = true
                                         inlineAddMealType = null
                                         viewModel.onSearchQueryChanged("")
+
+                                        // Riporta fluidamente in focus il pasto attivo corrente
+                                        val targetMeal = activeMealType ?: mealWithItems.mealType
+                                        val mealIdx = currentDayMeals.indexOfFirst { it.mealType == targetMeal }
+                                        if (mealIdx >= 0) {
+                                            coroutineScope.launch {
+                                                delay(80)
+                                                listState.animateScrollToItem(index = 2 + mealIdx)
+                                            }
+                                        }
                                     },
                                     onCancel = {
                                         inlineAddMealType = null
                                         viewModel.onSearchQueryChanged("")
+
+                                        // Riporta fluidamente in focus il pasto attivo anche in caso di annullamento
+                                        val targetMeal = activeMealType ?: mealWithItems.mealType
+                                        val mealIdx = currentDayMeals.indexOfFirst { it.mealType == targetMeal }
+                                        if (mealIdx >= 0) {
+                                            coroutineScope.launch {
+                                                delay(80)
+                                                listState.animateScrollToItem(index = 2 + mealIdx)
+                                            }
+                                        }
                                     }
                                 )
                             }

@@ -107,6 +107,14 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     private val _isEditorDirty = MutableStateFlow(false)
     val isEditorDirty: StateFlow<Boolean> = _isEditorDirty.asStateFlow()
 
+    // Stato di apertura dell'editor di creazione/modifica piano
+    private val _isPlanEditorOpen = MutableStateFlow(false)
+    val isPlanEditorOpen: StateFlow<Boolean> = _isPlanEditorOpen.asStateFlow()
+
+    fun setPlanEditorOpen(open: Boolean) {
+        _isPlanEditorOpen.value = open
+    }
+
     // Indice del tab di navigazione richiesto mentre l'editor ha modifiche pendenti
     private val _pendingNavigationTab = MutableStateFlow<Int?>(null)
     val pendingNavigationTab: StateFlow<Int?> = _pendingNavigationTab.asStateFlow()

@@ -1,6 +1,6 @@
 {
-  "summary":  "Piano di implementazione completato con successo: salvaguardia dati utente, travaso con embedding vettoriale ONNX, gestione backup in Impostazioni, eliminazione consentita dell'unico alimento e rimozione diagnostica dal piano giornaliero.",
-  "updatedAt":  "2026-11-08T09:47:53.288415590Z",
+  "summary":  "Piano di implementazione per la rimozione della card introduttiva in 'I miei piani', la rimozione della TopAppBar principale in 'Crea/Modifica Piano' e il riposizionamento automatico fluido sul pasto attivo dopo l'inserimento di un alimento.",
+  "updatedAt":  "2026-11-08T18:45:13.668906946Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

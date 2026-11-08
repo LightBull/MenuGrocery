@@ -1,36 +1,95 @@
-# Piano di Implementazione & Note di Rilascio (Patch Notes)
+# Ottimizzazione UX Schermate Piani e Modifica Pasti
 
-## 1. Risoluzione Problema Sovrascrittura Dati & Travaso Vettoriale
-È stato risolto il problema della sovrascrittura accidentale dei dati dell'utente durante gli aggiornamenti dell'app:
-1. **Travaso automatico con auto-embedding**: Quando lo schema del database viene aggiornato (introduzione di nuove colonne o nuove tabelle come `food_embeddings`), i dati presenti nel backup locale vengono riversati nel nuovo database SQLite valorizzando i campi mancanti con stringhe vuote o progressivi d'ordine, e generando contestualmente il vettore di embedding normalizzato a 64 dimensioni per ciascun alimento travasato.
-2. **Blocco inserimento demo**: In `MealPlanRepository.initializeDefaultDataIfNeeded()`, se sono presenti backup utente nella cartella dell'app, l'inserimento del piano demo predefinito ("Piano Benessere Mediterraneo") viene bloccato e viene eseguito automaticamente il ripristino dall'ultimo backup disponibile.
-3. **Pannello Backup & Ripristino in Impostazioni**: Aggiunta la sezione "Backup & Ripristino Dati" in `SettingsScreen` per visualizzare tutti i backup salvati su disco, creare nuovi backup manuali e forzare il ripristino di qualsiasi backup storico con finestra di conferma.
-4. **Eliminazione alimento consentita per l'unico cibo del pasto o piano**: In `PlanEditorScreen`, è ora possibile eliminare un alimento anche se è l'unico nel pasto o nell'intero piano, mostrando uno stato vuoto chiaro ("Nessun alimento in questo pasto. Tocca '+' per aggiungerne uno.").
-5. **Pulizia Header Lista Pasti**: Rimossa l'icona della diagnostica scongelamento dall'header di `DailyMealPlanScreen` (ora situata unicamente in Impostazioni).
+Questo aggiornamento rimuove la card informativa introduttiva nella schermata "I miei piani", elimina la TopAppBar principale (con titolo e icona impostazioni) durante la creazione e modifica del piano alimentare lasciando spazio alla barra nativa dell'editor, e implementa lo scorrimento automatico fluido sul pasto correntemente attivo una volta inserito un nuovo alimento.
 
----
+### User Review & Critical Decisions
 
-## 2. Note della Patch (Changelog)
+> [!IMPORTANT]
+> Le seguenti preferenze confermate nella fase di chiarimento guidano l'architettura della soluzione:
 
-### Patch v10.0 (Versione Corrente)
-- **Salvaguardia e Ripristino Dati Utente**: Implementato il backup preventivo automatico e il travaso nel nuovo schema Room.
-- **Predisposizione Modello Vettoriale ONNX**: Creata la tabella `food_embeddings` e il servizio `OnnxVectorService` (onnxruntime-android) per calcolare vettori di alimenti, categorie, quantità e cibi correlati; generazione degli embedding durante il travaso.
-- **Pannello Backup & Ripristino**: Sezione in Impostazioni per visualizzare la lista dei backup JSON locali, creare nuovi backup e ripristinare i propri dati storici.
-- **Percorsi Database in Chiaro**: Aggiunti in Impostazioni i percorsi assoluti sia del database principale dei piani (`mealplan_database`), sia della cartella di backup (`/files/backups/`), sia del database alimenti (`FoodDb.db`).
-- **Nuove Gesture in "I Miei Piani"**:
-  - Click sulla riga per accedere direttamente alla modifica (rimossa l'icona della matita).
-  - Swipe a destra (50%) per duplicare il piano con richiesta di conferma.
-  - Swipe a sinistra (50%) per eliminare il piano con richiesta di conferma contenente lo stato del piano (attivo/disattivo/unico piano).
-  - Rimozione completa del pulsante "Ricrea Database".
-- **Spostamento Diagnostica Scongelamento**: Spostata la diagnostica esclusivamente all'interno della schermata Impostazioni.
-- **Auto-scroll Lista Pasti**: All'apertura della schermata "Lista Pasti", la vista scorre fluidamente al pasto più vicino da consumare se la distanza temporale è $\le 2$ ore.
-- **Eliminazione cibo singolo**: Consentita l'eliminazione dell'alimento anche se è l'unico alimento nel pasto o nell'intero piano.
-- **Disabilitazione Creazione Automatica APK**: Rimosse le routine di copia automatica di file `.apk` nelle directory del workspace.
+- **Barra di navigazione inferiore**: Rimane visibile per garantire la coerenza di navigazione tra le sezioni principali dell'applicazione.
+- **TopAppBar in Creazione/Modifica Piano**: Viene nascosta la barra superiore dell'applicazione (titolo "I miei piani" + tasto impostazioni), lasciando attiva esclusivamente la TopAppBar contestuale dell'editor (pulsante indietro "←" e pulsante salva).
+- **Comportamento di scorrimento sul pasto**: Scorrimento fluido e animato (`animateScrollToItem`) all'inizio della scheda del pasto attivo immediatamente dopo l'inserimento dell'alimento e la chiusura della form di ricerca.
 
 ---
 
-### Patch v9.0 (Versione Precedente)
-- **Gestione Piani Multipli**: Supporto per più piani alimentari e attivazione dinamica del piano corrente (BR-01).
-- **Lista della Spesa Intelligente**: Raggruppamento per categoria e unità di misura, unione per ingredienti compatibili (BR-02).
-- **Notifiche & Promemoria di Scongelamento**: Schedulazione allarmi nel sistema operativo per cibi con flag di congelamento attivo (BR-03).
-- **Integrazione Alimenti FoodDb**: Consultazione integrata delle tabelle alimentari di riferimento in sola lettura.
+### 1. Overview & Core Concept
+
+- **Cosa fa**:
+  1. Nella scheda **"I miei piani"**, elimina la card statica "I Miei piani alimentari" in cima alla lista per mostrare immediatamente i piani disponibili in modo compatto e pulito.
+  2. Nella schermata di **Creazione / Modifica del piano** (`PlanEditorScreen`), maschera la `TopAppBar` globale dell'applicazione (`MainActivity`) evitando la duplicazione di barre di stato e rimuovendo il pulsante impostazioni non pertinente durante l'editing.
+  3. Mantiene uno stato del **pasto attivo** (`activeMealType`): al tocco di "+ Aggiungi" su un pasto (es. Pranzo), quel pasto diventa attivo fino alla selezione esplicita di un pasto diverso. Al completamento dell'aggiunta dell'alimento e chiusura della form espandibile, la vista esegue uno scorrimento animato verso la scheda del pasto attivo, posizionando l'utente direttamente sui comandi del pasto senza disorientamenti.
+- **Valore per l'utente**: Eliminazione di attriti visivi e operativi durante l'inserimento continuativo di alimenti nei pasti del piano settimanale.
+
+---
+
+### 2. User Experience & Visual Design
+
+- **Flusso "I miei piani"**:
+  - L'utente apre la tab "Piani": visualizza immediatamente la lista a scorrimento con i piani salvati e il badge del piano attivo, senza ingombri introduttivi.
+- **Flusso "Creazione / Modifica Piano"**:
+  - L'utente tocca un piano o il FAB "+": la TopAppBar di sistema dell'app scompare istantaneamente. Viene mostrata solo la barra dell'editor con la freccia indietro, il titolo "Nuovo piano / Modifica piano" e l'azione rapida "Salva".
+  - La barra inferiore con le tab rimane accessibile sul fondo.
+- **Flusso Aggiunta Alimento & Focus Automatico**:
+  - L'utente tocca "+" su "Pranzo": la form di inserimento rapido si apre nel pasto e il sistema memorizza "Pranzo" come pasto corrente.
+  - L'utente digita o seleziona un alimento e preme "Aggiungi al pasto":
+    1. L'alimento viene aggiunto alla lista degli alimenti del pasto corrente.
+    2. La form di ricerca si chiude.
+    3. Il `LazyListState` attiva uno scorrimento animato che ricentra la card "Pranzo" in cima al viewport.
+    4. L'utente ritrova immediatamente il pasto senza essere spinto visivamente sulla cena o sui pasti successivi a causa della contrazione della form.
+
+---
+
+### 3. Key Product Decisions & Trade-Offs
+
+- **Decisione 1: Tracciamento dello stato Editor nel ViewModel (`isPlanEditorOpen`)**:
+  - *Approccio scelto*: Aggiunta di `isPlanEditorOpen: StateFlow<Boolean>` in `MealPlanViewModel`, attivato/disattivato da `PlanEditorScreen` tramite `DisposableEffect`.
+  - *Perché*: `MainActivity` osserva reattivamente questo stato e nasconde la TopAppBar globale (`!showSettings && !isPlanEditorOpen`) in modo pulito e disaccoppiato, senza dover passare lambda nidificate su più livelli di composable.
+- **Decisione 2: Stato `activeMealType` persistito a livello di sessione editor**:
+  - *Approccio scelto*: Memorizzazione del `MealType` cliccato in una variabile di stato `activeMealType` che non si azzera alla chiusura della form, ma solo quando l'utente tocca esplicitamente un pasto differente o cambia giorno.
+  - *Perché*: Risponde fedelmente alla specifica dell'utente: *"ogni prima volta che viene cliccato l'aggiungi in un pasto attiva di fatto il pasto corrente finchè non viene cliccato l'aggiungi in un nuovo pasto lo stato non cambia"*.
+- **Decisione 3: Timing dello scorrimento animato**:
+  - *Approccio scelto*: Coroutine con leggero ritardo (circa 80-100ms) al trigger di chiusura per consentire a Compose di ricalcolare l'altezza contratta della lista prima di animare lo scroll all'indice del pasto (`2 + mealIndex`).
+  - *Perché*: Evita salti di rendering e garantisce che lo scorrimento porti la vista al punto esatto.
+
+---
+
+### 4. Technical Architecture & Data Strategy
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        MainActivity                         │
+│  - Observes: isPlanEditorOpen from ViewModel                │
+│  - Condition: if (!showSettings && !isPlanEditorOpen)       │
+│    TopAppBar(title, settingsButton)                         │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+            ┌──────────────────┴──────────────────┐
+            ▼                                     ▼
+┌───────────────────────────────┐   ┌───────────────────────────┐
+│  MealPlansManagementScreen    │   │      PlanEditorScreen     │
+│  - Removed intro Surface card │   │  - Own dedicated header   │
+│  - Shows only plan cards + FAB│   │  - State: activeMealType  │
+└───────────────────────────────┘   │  - Auto-scroll coroutine  │
+                                    └───────────────────────────┘
+```
+
+#### Modifiche ai Componenti:
+
+1. **`MealPlanViewModel.kt`**:
+   - `_isPlanEditorOpen = MutableStateFlow(false)`
+   - `val isPlanEditorOpen: StateFlow<Boolean> = _isPlanEditorOpen.asStateFlow()`
+   - `fun setPlanEditorOpen(open: Boolean)`
+
+2. **`MainActivity.kt`**:
+   - `val isPlanEditorOpen by viewModel.isPlanEditorOpen.collectAsState()`
+   - Condizione `topBar`: `if (!showSettings && !isPlanEditorOpen)`
+
+3. **`MealPlansManagementScreen.kt`**:
+   - Rimozione completa del blocco `item { Surface(...) { ... myPlansTitle ... } }` all'interno della `LazyColumn`.
+
+4. **`PlanEditorScreen.kt`**:
+   - `DisposableEffect` per impostare `viewModel.setPlanEditorOpen(true)` all'avvio e `false` su `onDispose`.
+   - Gestione di `activeMealType: MealType?`.
+   - Nel pulsante inline `+`: assegnazione `activeMealType = mealWithItems.mealType`.
+   - In `onConfirmAdd`: chiusura form, ricalcolo posizionamento del pasto attivo con `currentDayMeals.indexOfFirst { it.mealType == targetMeal }` e chiamata a `listState.animateScrollToItem(index = 2 + targetIdx)`.

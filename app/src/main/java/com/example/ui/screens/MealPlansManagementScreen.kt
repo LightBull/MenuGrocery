@@ -113,43 +113,9 @@ fun MealPlansManagementScreen(
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 96.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            item {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp)),
-                    color = MaterialTheme.colorScheme.surface,
-                    tonalElevation = 2.dp
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = com.example.ui.i18n.AppStrings.myPlansTitle(currentLanguage),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = com.example.ui.i18n.AppStrings.myPlansSubtitle(currentLanguage),
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
-                                "Tocca un piano per modificarlo. Trascina a destra per copiare, a sinistra per eliminare."
-                            else
-                                "Tap a plan to edit. Swipe right to duplicate, left to delete.",
-                            fontSize = 11.sp,
-                            color = SagePrimary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                }
-            }
-
             items(plans, key = { it.id }) { plan ->
                 val isActive = plan.id == activePlan?.id
                 SwipeableMealPlanCard(

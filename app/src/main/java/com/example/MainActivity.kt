@@ -97,6 +97,7 @@ fun MealPlanAppRoot(
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
     val isEditorDirty by viewModel.isEditorDirty.collectAsState()
+    val isPlanEditorOpen by viewModel.isPlanEditorOpen.collectAsState()
 
     // Flag per disattivazione temporanea login e sincronizzazione cloud (attivabile in futuro)
     val cloudAndLoginEnabled = false
@@ -163,7 +164,7 @@ fun MealPlanAppRoot(
         contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            if (!showSettings) {
+            if (!showSettings && !isPlanEditorOpen) {
                 TopAppBar(
                     title = {
                         Text(
