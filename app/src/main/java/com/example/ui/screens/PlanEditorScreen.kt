@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.RestaurantMenu
@@ -743,6 +744,35 @@ fun PlanEditorScreen(
                                     deletingFoodTarget = Triple(selectedDay, mealWithItems.mealType, foodItem)
                                 }
                             )
+                        } else {
+                            // Stato vuoto amichevole: consente di svuotare completamente il pasto o il piano
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Text(
+                                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                            "Nessun alimento in questo pasto. Tocca '+' per aggiungerne uno."
+                                        else
+                                            "No foods in this meal. Tap '+' to add one.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
                         }
 
                         // Componente Form Inline per Aggiunta Rapida Alimento (senza cambiare schermata!)

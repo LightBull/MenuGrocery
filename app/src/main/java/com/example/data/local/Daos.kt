@@ -156,3 +156,34 @@ interface AppSettingDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setSetting(setting: AppSettingEntity)
 }
+
+@Dao
+interface FoodEmbeddingDao {
+    @Query("SELECT * FROM food_embeddings ORDER BY updatedAt DESC")
+    fun getAllEmbeddings(): Flow<List<FoodEmbeddingEntity>>
+
+    @Query("SELECT * FROM food_embeddings")
+    suspend fun getAllEmbeddingsSync(): List<FoodEmbeddingEntity>
+
+    @Query("SELECT * FROM food_embeddings WHERE foodName LIKE '%' || :query || '%' LIMIT 20")
+    suspend fun searchEmbeddingsByName(query: String): List<FoodEmbeddingEntity>
+
+    @Query("SELECT * FROM food_embeddings WHERE id = :id LIMIT 1")
+    suspend fun getEmbeddingById(id: String): FoodEmbeddingEntity?
+
+    @Query("SELECT * FROM food_embeddings WHERE foodName = :foodName LIMIT 1")
+    suspend fun getEmbeddingByFoodName(foodName: String): FoodEmbeddingEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEmbedding(embedding: FoodEmbeddingEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEmbeddings(embeddings: List<FoodEmbeddingEntity>)
+
+    @Delete
+    suspend fun deleteEmbedding(embedding: FoodEmbeddingEntity)
+
+    @Query("DELETE FROM food_embeddings")
+    suspend fun clearAll()
+}
+

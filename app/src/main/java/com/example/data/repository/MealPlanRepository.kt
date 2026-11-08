@@ -1,6 +1,7 @@
 package com.example.data.repository
 
 import android.content.Context
+import com.example.data.local.DatabaseMigrationManager
 import com.example.data.local.MealEntity
 import com.example.data.local.MealFoodItemEntity
 import com.example.data.local.MealPlanDatabase
@@ -885,6 +886,19 @@ class MealPlanRepository(
         val existingPlans = mealPlanDao.getAllPlans().firstOrNull()
         if (!existingPlans.isNullOrEmpty()) return@withContext
 
+        // Se esistono già backup locali creati in precedenza, non sovrascrivere con i dati demo!
+        val availableBackups = DatabaseMigrationManager.listBackups(context)
+        if (availableBackups.isNotEmpty()) {
+            android.util.Log.i("MealPlanRepository", "Rilevati ${availableBackups.size} backup esistenti. Ripristino automatico dell'ultimo backup...")
+            val latestBackup = availableBackups.first()
+            val db = database.openHelper.writableDatabase
+            val summary = DatabaseMigrationManager.restoreDataFromBackup(db, latestBackup)
+            if (summary != null && summary.restoredRowsCount > 0) {
+                DefrostScheduler.resyncAllActiveDefrostReminders(context, database)
+                return@withContext
+            }
+        }
+
         // Crea il piano predefinito attivo: "Piano Benessere Mediterraneo"
         val planId = UUID.randomUUID().toString()
         val defaultPlan = MealPlanEntity(
@@ -1152,6 +1166,25 @@ class MealPlanRepository(
         DefrostScheduler.cancelAllReminders(context)
         database.clearAllTables()
         initializeDefaultDataIfNeeded()
+    }
+
+    suspend fun getAvailableBackups(): List<java.io.File> = withContext(Dispatchers.IO) {
+        DatabaseMigrationManager.listBackups(context)
+    }
+
+    suspend fun createManualBackup(): java.io.File? = withContext(Dispatchers.IO) {
+        DatabaseMigrationManager.createBackupJson(context)
+    }
+
+    suspend fun restoreFromBackup(backupFile: java.io.File): Boolean = withContext(Dispatchers.IO) {
+        val db = database.openHelper.writableDatabase
+        val summary = DatabaseMigrationManager.restoreDataFromBackup(db, backupFile)
+        if (summary != null) {
+            DefrostScheduler.resyncAllActiveDefrostReminders(context, database)
+            true
+        } else {
+            false
+        }
     }
 
     suspend fun resyncDefrostReminders(): Int = withContext(Dispatchers.IO) {

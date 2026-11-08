@@ -58,10 +58,17 @@ import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 import com.example.ui.viewmodel.MealPlanViewModel
 
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.runtime.LaunchedEffect
+import java.time.LocalTime
+import java.time.temporal.ChronoUnit
+import kotlin.math.abs
+
 /**
  * Schermata Piano Pasti: ora interamente di sola lettura per una consultazione rapida e pulita.
  * L'aggiunta e la modifica dei pasti avvengono all'interno della sezione "I Miei Piani".
  * Supporta la navigazione tra i giorni con swipe orizzontale a destra e sinistra.
+ * Scorre automaticamente al prossimo pasto da consumare se a 2 ore o meno di distanza dall'orario consigliato.
  */
 @Composable
 fun DailyMealPlanScreen(
@@ -76,8 +83,36 @@ fun DailyMealPlanScreen(
     val dailySummary by viewModel.dailySummary.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
+    val listState = rememberLazyListState()
     var totalDragX by remember { mutableFloatStateOf(0f) }
-    var showDefrostDiagnostics by remember { mutableStateOf(false) }
+
+    // Auto-scroll al prossimo pasto da consumare se entro 2 ore (<= 120 minuti) dall'orario tipico
+    LaunchedEffect(mealsForDay) {
+        if (mealsForDay.isNotEmpty()) {
+            val now = LocalTime.now()
+            var closestMealIndex = -1
+            var minDiffMinutes = Long.MAX_VALUE
+
+            // Gli item fissi prima dei pasti nella LazyColumn sono 3 (Intestazione piano = 0, DaySelectorRow = 1, DailyNutritionalCard = 2)
+            mealsForDay.forEachIndexed { index, mealWithItems ->
+                try {
+                    val mealTime = LocalTime.parse(mealWithItems.mealType.typicalTime)
+                    val diff = abs(ChronoUnit.MINUTES.between(now, mealTime))
+                    // Pasto entro 2 ore (120 minuti)
+                    if (diff <= 120 && diff < minDiffMinutes) {
+                        minDiffMinutes = diff
+                        closestMealIndex = index
+                    }
+                } catch (_: Exception) {}
+            }
+
+            if (closestMealIndex != -1) {
+                // Indice del pasto nella LazyColumn (3 header items + closestMealIndex)
+                val targetIndex = 3 + closestMealIndex
+                listState.animateScrollToItem(targetIndex)
+            }
+        }
+    }
 
     Box(
         modifier = modifier
@@ -109,6 +144,7 @@ fun DailyMealPlanScreen(
             }
     ) {
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 96.dp)
         ) {
@@ -163,28 +199,12 @@ fun DailyMealPlanScreen(
                         }
                     }
 
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    FilledTonalButton(
+                        onClick = onNavigateToPlans,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.testTag("btn_switch_plan")
                     ) {
-                        IconButton(
-                            onClick = { showDefrostDiagnostics = true },
-                            modifier = Modifier.testTag("btn_defrost_diagnostics_daily")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = com.example.ui.i18n.AppStrings.defrostDiagnostics(currentLanguage),
-                                tint = CartaDaZucchero
-                            )
-                        }
-
-                        FilledTonalButton(
-                            onClick = onNavigateToPlans,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.testTag("btn_switch_plan")
-                        ) {
-                            Text(com.example.ui.i18n.AppStrings.changePlan(currentLanguage), fontSize = 12.sp)
-                        }
+                        Text(com.example.ui.i18n.AppStrings.changePlan(currentLanguage), fontSize = 12.sp)
                     }
                 }
             }
@@ -217,13 +237,6 @@ fun DailyMealPlanScreen(
                 }
             )
         }
-    }
-
-    if (showDefrostDiagnostics) {
-        DefrostDiagnosticsBottomSheet(
-            viewModel = viewModel,
-            onDismiss = { showDefrostDiagnostics = false }
-        )
     }
 }
 }

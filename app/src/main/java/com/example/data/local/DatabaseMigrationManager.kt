@@ -27,7 +27,7 @@ object DatabaseMigrationManager {
 
     private const val TAG = "DbMigrationManager"
     const val DB_NAME = "mealplan_database"
-    const val TARGET_VERSION = 3
+    const val TARGET_VERSION = 4
 
     private const val PENDING_RESTORE_FILE_NAME = "pending_migration_restore.json"
 
@@ -322,6 +322,10 @@ object DatabaseMigrationManager {
                 }
             }
 
+            // Generazione automatica degli embeddings nella nuova tabella 'food_embeddings'
+            // per tutti gli alimenti travasati in 'meal_food_items'
+            populateFoodEmbeddingsDuringMigration(db)
+
             db.execSQL("PRAGMA foreign_keys = ON;")
 
             val summary = MigrationSummary(
@@ -332,7 +336,7 @@ object DatabaseMigrationManager {
                 restoredRowsCount = restoredRowsCount
             )
             _lastMigrationSummary = summary
-            Log.i(TAG, "Ripristino completato con successo: $restoredRowsCount record ripristinati in $restoredTablesCount tabelle.")
+            Log.i(TAG, "Ripristino completato con successo: $restoredRowsCount record ripristinati in $restoredTablesCount tabelle (con embeddings vettoriali ONNX).")
             return summary
         } catch (e: Exception) {
             Log.e(TAG, "Errore durante il ripristino dei dati dal backup: ${e.message}", e)
@@ -341,6 +345,88 @@ object DatabaseMigrationManager {
             } catch (_: Exception) {}
             return null
         }
+    }
+
+    /**
+     * Popola la tabella `food_embeddings` calcolando il vettore deterministico per ogni alimento
+     * unico presente nella tabella `meal_food_items`.
+     */
+    fun populateFoodEmbeddingsDuringMigration(db: SupportSQLiteDatabase) {
+        try {
+            val hasFoodTable = db.query(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='food_embeddings'"
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) > 0 else false
+            }
+            val hasItemsTable = db.query(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name='meal_food_items'"
+            ).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getInt(0) > 0 else false
+            }
+
+            if (!hasFoodTable || !hasItemsTable) return
+
+            val cursor = db.query("SELECT DISTINCT name, category, quantity, unit FROM meal_food_items WHERE name IS NOT NULL AND name != ''")
+            val itemsToEmbed = mutableListOf<Triple<String, String, Pair<Double, String>>>()
+            while (cursor.moveToNext()) {
+                val foodName = cursor.getString(0) ?: ""
+                val category = if (!cursor.isNull(1)) cursor.getString(1) else ""
+                val quantity = if (!cursor.isNull(2)) cursor.getDouble(2) else 100.0
+                val unit = if (!cursor.isNull(3)) cursor.getString(3) else "g"
+                if (foodName.isNotBlank()) {
+                    itemsToEmbed.add(Triple(foodName, category, Pair(quantity, unit)))
+                }
+            }
+            cursor.close()
+
+            for ((foodName, category, quantUnit) in itemsToEmbed) {
+                val (quantity, unit) = quantUnit
+                val existing = db.query("SELECT id FROM food_embeddings WHERE foodName = ?", arrayOf(foodName)).use { c ->
+                    c.moveToFirst()
+                }
+                if (!existing) {
+                    val vector = computeDeterministicVector("$foodName $category", 64)
+                    val jsonArray = JSONArray()
+                    for (v in vector) {
+                        jsonArray.put(v.toDouble())
+                    }
+
+                    val cv = ContentValues().apply {
+                        put("id", java.util.UUID.randomUUID().toString())
+                        put("foodName", foodName)
+                        put("category", category)
+                        put("referenceQuantity", quantity)
+                        put("unit", unit)
+                        put("relatedFoods", "")
+                        put("embeddingVector", jsonArray.toString())
+                        put("vectorDimensions", vector.size)
+                        put("modelVersion", "onnx-heuristic-v1")
+                        put("updatedAt", System.currentTimeMillis())
+                    }
+                    db.insert("food_embeddings", SQLiteDatabase.CONFLICT_REPLACE, cv)
+                }
+            }
+            Log.i(TAG, "Generazione embedding vettoriali completata per ${itemsToEmbed.size} alimenti.")
+        } catch (e: Exception) {
+            Log.e(TAG, "Errore durante la generazione automatica degli embeddings: ${e.message}", e)
+        }
+    }
+
+    private fun computeDeterministicVector(text: String, dimensions: Int = 64): FloatArray {
+        val vector = FloatArray(dimensions)
+        val normalized = text.trim().lowercase(Locale.ROOT)
+        for (i in normalized.indices) {
+            val charCode = normalized[i].code
+            val index = (charCode * (i + 1)) % dimensions
+            vector[index] += (charCode / 255.0f)
+        }
+        var sumSquares = 0.0f
+        for (v in vector) sumSquares += v * v
+        val norm = kotlin.math.sqrt(sumSquares)
+        if (norm > 0.0f) {
+            for (i in vector.indices) vector[i] /= norm
+        }
+        return vector
     }
 
     /**

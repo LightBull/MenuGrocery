@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,25 +23,21 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.Refresh
-import com.example.ui.components.DefrostDiagnosticsBottomSheet
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -74,12 +72,13 @@ fun MealPlansManagementScreen(
     val activePlan by viewModel.activePlan.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
 
-    // Stato per apertura dell'Editor a schermo intero:
-    // null = mostra lista piani, oppure MealPlanEntity per modifica, o nuovo piano
+    // Stato per apertura dell'Editor a schermo intero
     var editingPlan by remember { mutableStateOf<MealPlanEntity?>(null) }
     var isCreatingNew by remember { mutableStateOf(false) }
-    var showResetDbDialog by remember { mutableStateOf(false) }
-    var showDefrostDiagnostics by remember { mutableStateOf(false) }
+
+    // Dialoghi di conferma swipe
+    var planToDuplicate by remember { mutableStateOf<MealPlanEntity?>(null) }
+    var planToDelete by remember { mutableStateOf<MealPlanEntity?>(null) }
 
     if (isCreatingNew) {
         PlanEditorScreen(
@@ -137,68 +136,38 @@ fun MealPlansManagementScreen(
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        OutlinedButton(
-                            onClick = { showDefrostDiagnostics = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("btn_defrost_diagnostics"),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.NotificationsActive,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(com.example.ui.i18n.AppStrings.defrostDiagnostics(currentLanguage), fontSize = 13.sp)
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedButton(
-                            onClick = { showResetDbDialog = true },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("btn_reset_database"),
-                            shape = RoundedCornerShape(12.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                if (currentLanguage == com.example.data.model.AppLanguage.IT) "Ricrea Database (Versione Attuale)" else "Recreate Database (Current Version)",
-                                fontSize = 13.sp
-                            )
-                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                "Tocca un piano per modificarlo. Trascina a destra per copiare, a sinistra per eliminare."
+                            else
+                                "Tap a plan to edit. Swipe right to duplicate, left to delete.",
+                            fontSize = 11.sp,
+                            color = SagePrimary,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
 
             items(plans, key = { it.id }) { plan ->
                 val isActive = plan.id == activePlan?.id
-                MealPlanCard(
+                SwipeableMealPlanCard(
                     plan = plan,
                     isActive = isActive,
                     lang = currentLanguage,
-                    canDelete = plans.size > 1 && !isActive,
+                    onEdit = { editingPlan = plan },
                     onActivate = {
                         viewModel.activatePlan(plan.id)
                         onPlanActivated()
                     },
-                    onEdit = {
-                        editingPlan = plan
-                    },
-                    onDuplicate = {
-                        viewModel.duplicatePlan(plan.id)
-                    },
-                    onDelete = { viewModel.deletePlan(plan) }
+                    onRequestDuplicate = { planToDuplicate = plan },
+                    onRequestDelete = { planToDelete = plan }
                 )
             }
         }
 
-        // FAB per Creare Nuovo Piano (arrotondato con sola icona +)
+        // FAB per Creare Nuovo Piano (circolare con sola icona +)
         FloatingActionButton(
             onClick = { isCreatingNew = true },
             modifier = Modifier
@@ -216,202 +185,317 @@ fun MealPlansManagementScreen(
             )
         }
 
-        if (showResetDbDialog) {
+        // Popup di conferma Duplicazione Piano (Swipe verso destra)
+        if (planToDuplicate != null) {
+            val target = planToDuplicate!!
             AlertDialog(
-                onDismissRequest = { showResetDbDialog = false },
+                onDismissRequest = { planToDuplicate = null },
                 title = {
                     Text(
-                        if (currentLanguage == com.example.data.model.AppLanguage.IT) "Ricreare il Database?" else "Recreate Database?",
+                        if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Piano Alimentare" else "Duplicate Meal Plan",
                         fontWeight = FontWeight.Bold
                     )
                 },
                 text = {
                     Text(
                         if (currentLanguage == com.example.data.model.AppLanguage.IT)
-                            "Questa operazione eliminerà tutti i dati e ricreerà le tabelle secondo la versione attuale dello schema, ripopolando i pasti di prova predefiniti."
+                            "Vuoi creare una copia del piano '${target.title}'? Tutti i pasti e gli alimenti verranno duplicati nel nuovo piano."
                         else
-                            "This will clear all data and recreate tables according to current schema version, restoring default meal plans."
+                            "Do you want to create a copy of '${target.title}'? All meals and items will be copied to the new plan."
                     )
                 },
                 confirmButton = {
                     Button(
                         onClick = {
-                            showResetDbDialog = false
-                            viewModel.resetDatabaseToDefault()
+                            val id = target.id
+                            planToDuplicate = null
+                            viewModel.duplicatePlan(id)
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
                     ) {
                         Text(
-                            if (currentLanguage == com.example.data.model.AppLanguage.IT) "Distruggi e Ricrea" else "Clear and Recreate",
+                            if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia" else "Duplicate",
                             color = Color.White
                         )
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showResetDbDialog = false }) {
+                    TextButton(onClick = { planToDuplicate = null }) {
                         Text(com.example.ui.i18n.AppStrings.cancel(currentLanguage))
                     }
                 }
             )
         }
 
-        if (showDefrostDiagnostics) {
-            DefrostDiagnosticsBottomSheet(
-                viewModel = viewModel,
-                onDismiss = { showDefrostDiagnostics = false }
+        // Popup di conferma Eliminazione Piano (Swipe verso sinistra)
+        if (planToDelete != null) {
+            val target = planToDelete!!
+            val isTargetActive = target.id == activePlan?.id
+            val isOnlyPlan = plans.size <= 1
+
+            AlertDialog(
+                onDismissRequest = { planToDelete = null },
+                title = {
+                    Text(
+                        if (currentLanguage == com.example.data.model.AppLanguage.IT) "Elimina Piano Alimentare" else "Delete Meal Plan",
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column {
+                        Text(
+                            text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                "Sei sicuro di voler eliminare definitivamente il piano '${target.title}'?"
+                            else
+                                "Are you sure you want to permanently delete '${target.title}'?"
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        // Riassunto dello stato attuale del piano
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isTargetActive || isOnlyPlan) TerracottaAccent.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Stato attuale del piano:" else "Current plan status:",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = if (isTargetActive || isOnlyPlan) TerracottaAccent else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                if (isTargetActive) {
+                                    Text(
+                                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                            "• Questo è attualmente il PIANO ATTIVO. Eliminandolo, i pasti giornalieri e la lista della spesa non avranno più un piano di riferimento fino all'attivazione di uno nuovo."
+                                        else
+                                            "• This is currently the ACTIVE PLAN. Deleting it leaves meals and shopping without an active reference.",
+                                        fontSize = 11.sp,
+                                        color = TerracottaAccent
+                                    )
+                                } else {
+                                    Text(
+                                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                            "• Questo piano è attualmente INATTIVO."
+                                        else
+                                            "• This plan is currently INACTIVE.",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isOnlyPlan) {
+                                    Spacer(modifier = Modifier.height(2.dp))
+                                    Text(
+                                        text = if (currentLanguage == com.example.data.model.AppLanguage.IT)
+                                            "• Questo è l'UNICO piano salvato. Eliminandolo la lista dei piani rimarrà vuota finché non ne crei un altro."
+                                        else
+                                            "• This is the ONLY plan saved. Deleting it will leave the plans list empty.",
+                                        fontSize = 11.sp,
+                                        color = TerracottaAccent
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val plan = target
+                            planToDelete = null
+                            viewModel.deletePlan(plan)
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(
+                            com.example.ui.i18n.AppStrings.btnDelete(currentLanguage),
+                            color = Color.White
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { planToDelete = null }) {
+                        Text(com.example.ui.i18n.AppStrings.cancel(currentLanguage))
+                    }
+                }
             )
         }
     }
 }
 
 @Composable
-fun MealPlanCard(
+fun SwipeableMealPlanCard(
     plan: MealPlanEntity,
     isActive: Boolean,
-    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
-    canDelete: Boolean,
-    onActivate: () -> Unit,
+    lang: com.example.data.model.AppLanguage,
     onEdit: () -> Unit,
-    onDuplicate: () -> Unit,
-    onDelete: () -> Unit
+    onActivate: () -> Unit,
+    onRequestDuplicate: () -> Unit,
+    onRequestDelete: () -> Unit
 ) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .testTag("plan_card_${plan.id.take(4)}"),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isActive) SagePrimaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
-        ),
-        shape = RoundedCornerShape(18.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp)
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+    val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * 0.5f },
+        confirmValueChange = { dismissValue ->
+            when (dismissValue) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    // Swipe verso destra dalla metà in poi -> Copia piano con conferma
+                    onRequestDuplicate()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    // Swipe verso sinistra dalla metà in poi -> Elimina piano con conferma e stato
+                    onRequestDelete()
+                    false
+                }
+                SwipeToDismissBoxValue.Settled -> false
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val isStartToEnd = direction == SwipeToDismissBoxValue.StartToEnd
+            val isEndToStart = direction == SwipeToDismissBoxValue.EndToStart
+            val backgroundColor = when {
+                isStartToEnd -> SagePrimary
+                isEndToStart -> TerracottaAccent
+                else -> Color.Transparent
+            }
+            val alignment = if (isStartToEnd) Alignment.CenterStart else Alignment.CenterEnd
+            val icon = if (isStartToEnd) Icons.Default.ContentCopy else Icons.Default.DeleteOutline
+            val text = if (isStartToEnd) {
+                if (lang == com.example.data.model.AppLanguage.IT) "Copia" else "Duplicate"
+            } else {
+                if (lang == com.example.data.model.AppLanguage.IT) "Elimina" else "Delete"
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(backgroundColor)
+                    .padding(horizontal = 20.dp),
+                contentAlignment = alignment
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    if (isActive) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = SagePrimary
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CheckCircle,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = com.example.ui.i18n.AppStrings.activePlanBadge(lang).uppercase(),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            }
+                if (isStartToEnd || isEndToStart) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (isStartToEnd) {
+                            Icon(imageVector = icon, contentDescription = text, tint = Color.White)
+                            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        } else {
+                            Text(text = text, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Icon(imageVector = icon, contentDescription = text, tint = Color.White)
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
                     }
+                }
+            }
+        }
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onEdit() }
+                .testTag("plan_card_${plan.id.take(4)}"),
+            colors = CardDefaults.cardColors(
+                containerColor = if (isActive) SagePrimaryContainer.copy(alpha = 0.5f) else MaterialTheme.colorScheme.surface
+            ),
+            shape = RoundedCornerShape(18.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = if (isActive) 3.dp else 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        if (isActive) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = SagePrimary
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = com.example.ui.i18n.AppStrings.activePlanBadge(lang).uppercase(),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
 
-                    Text(
-                        text = com.example.ui.i18n.AppStrings.translatePlanTitle(plan.title, lang),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                        Text(
+                            text = com.example.ui.i18n.AppStrings.translatePlanTitle(plan.title, lang),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(plan.createdAt))
+                        val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(plan.createdAt))
+                        Text(
+                            text = com.example.ui.i18n.AppStrings.createdOn(dateStr, lang),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                val notes = com.example.ui.i18n.AppStrings.translatePlanNotes(plan.notes, lang)
+                if (!notes.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = com.example.ui.i18n.AppStrings.createdOn(dateStr, lang),
-                        fontSize = 11.sp,
+                        text = notes,
+                        fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(
-                        onClick = onEdit,
-                        modifier = Modifier.size(36.dp).testTag("btn_edit_plan_${plan.id.take(4)}")
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (!isActive) {
+                    Button(
+                        onClick = onActivate,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .testTag("btn_activate_plan_${plan.id.take(4)}"),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = com.example.ui.i18n.AppStrings.btnEdit(lang),
-                            tint = SagePrimary,
-                            modifier = Modifier.size(20.dp)
+                        Text(com.example.ui.i18n.AppStrings.btnSetActive(lang), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp)),
+                        color = SagePrimary.copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            text = if (lang == com.example.data.model.AppLanguage.IT) "Questo piano governa i pasti attuali e la lista della spesa" else "This plan governs current meals and the shopping list",
+                            modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
+                            fontSize = 11.sp,
+                            color = SagePrimary,
+                            fontWeight = FontWeight.Medium
                         )
                     }
-
-                    IconButton(
-                        onClick = onDuplicate,
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.ContentCopy,
-                            contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Duplica piano" else "Duplicate plan",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-
-                    if (canDelete) {
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(36.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = com.example.ui.i18n.AppStrings.btnDelete(lang),
-                                tint = TerracottaAccent,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            val notes = com.example.ui.i18n.AppStrings.translatePlanNotes(plan.notes, lang)
-            if (!notes.isNullOrBlank()) {
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = notes,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (!isActive) {
-                Button(
-                    onClick = onActivate,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp)
-                        .testTag("btn_activate_plan_${plan.id.take(4)}"),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
-                ) {
-                    Text(com.example.ui.i18n.AppStrings.btnSetActive(lang), fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-            } else {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp)),
-                    color = SagePrimary.copy(alpha = 0.1f)
-                ) {
-                    Text(
-                        text = if (lang == com.example.data.model.AppLanguage.IT) "Questo piano governa i pasti attuali e la lista della spesa" else "This plan governs current meals and the shopping list",
-                        modifier = Modifier.padding(vertical = 6.dp, horizontal = 10.dp),
-                        fontSize = 11.sp,
-                        color = SagePrimary,
-                        fontWeight = FontWeight.Medium
-                    )
                 }
             }
         }

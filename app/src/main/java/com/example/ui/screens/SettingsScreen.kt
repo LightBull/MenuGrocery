@@ -39,6 +39,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -52,14 +53,20 @@ import androidx.compose.ui.unit.sp
 import android.app.Activity
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.LocalContext
 import com.example.data.model.AppLanguage
 import com.example.data.model.SubscriptionTier
@@ -69,6 +76,12 @@ import com.example.ui.theme.CartaDaZucchero
 import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 import com.example.ui.viewmodel.MealPlanViewModel
+
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.ui.components.DefrostDiagnosticsBottomSheet
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,6 +96,7 @@ fun SettingsScreen(
     val context = LocalContext.current
     val activity = context as? Activity
     val cloudAndLoginEnabled = false
+    var showDefrostDiagnostics by remember { mutableStateOf(false) }
 
     BackHandler {
         onNavigateBack()
@@ -538,7 +552,10 @@ fun SettingsScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         Text(
-                            text = AppStrings.foodDbSectionSubtitle(currentLanguage),
+                            text = if (currentLanguage == AppLanguage.IT)
+                                "L'applicazione utilizza due database SQLite su disco:\n1. Database Principale dei Piani (Room ORM, scrittura/lettura)\n2. Database Alimenti Preconfezionato (FoodDb.db, sola lettura)"
+                            else
+                                "The app uses two on-disk SQLite databases:\n1. Main Meal Plan Database (Room ORM, read/write)\n2. Pre-packaged Food Database (FoodDb.db, read-only)",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.85f),
                             lineHeight = 18.sp
@@ -553,10 +570,42 @@ fun SettingsScreen(
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
-                                    text = AppStrings.foodDbTablesInfo(currentLanguage),
+                                    text = if (currentLanguage == AppLanguage.IT) "Percorso Database Principale (mealplan_database):" else "Main Database Path (mealplan_database):",
                                     fontSize = 11.sp,
-                                    color = Color.White.copy(alpha = 0.75f),
-                                    fontWeight = FontWeight.Medium
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFA5D6A7)
+                                )
+                                Text(
+                                    text = context.getDatabasePath("mealplan_database").absolutePath,
+                                    fontSize = 11.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Cartella Backup di sicurezza:" else "Safety Backups Directory:",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CartaDaZucchero
+                                )
+                                Text(
+                                    text = "${context.filesDir.absolutePath}/backups/",
+                                    fontSize = 11.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Percorso Database Alimenti (FoodDb.db):" else "Food Database Path (FoodDb.db):",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White.copy(alpha = 0.75f)
+                                )
+                                Text(
+                                    text = context.getDatabasePath("FoodDb.db").absolutePath,
+                                    fontSize = 11.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = Color.White.copy(alpha = 0.9f)
                                 )
                             }
                         }
@@ -652,6 +701,278 @@ fun SettingsScreen(
                 }
             }
 
+            // Sezione Gestione Backup e Ripristino Dati Personali
+            item {
+                val availableBackups by viewModel.availableBackups.collectAsState()
+                var selectedBackupToRestore by remember { mutableStateOf<java.io.File?>(null) }
+
+                LaunchedEffect(Unit) {
+                    viewModel.loadAvailableBackups()
+                }
+
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = SagePrimary.copy(alpha = 0.2f),
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Backup,
+                                            contentDescription = null,
+                                            tint = SagePrimary,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                                Column {
+                                    Text(
+                                        text = if (currentLanguage == AppLanguage.IT) "Backup & Ripristino Dati" else "Data Backup & Restore",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        text = if (currentLanguage == AppLanguage.IT) "Salvataggi di sicurezza sul dispositivo" else "On-device safety backups",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = Color.White.copy(alpha = 0.65f)
+                                    )
+                                }
+                            }
+
+                            FilledTonalButton(
+                                onClick = { viewModel.createManualBackup() },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.testTag("btn_create_manual_backup")
+                            ) {
+                                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Nuovo" else "New",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = if (currentLanguage == AppLanguage.IT)
+                                "I backup salvano integralmente i tuoi piani, pasti e alimenti. Ripristinando un backup, i dati vengono automaticamente adattati allo schema attuale e integrati con la tabella vettoriale ONNX."
+                            else
+                                "Backups store your plans, meals, and foods. Restoring adapts records to the new schema and populates ONNX vector embeddings.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.75f)
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        if (availableBackups.isEmpty()) {
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT) "Nessun backup trovato nella cartella locale." else "No local backups found.",
+                                    modifier = Modifier.padding(12.dp),
+                                    fontSize = 12.sp,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        } else {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                availableBackups.forEach { backupFile ->
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(10.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = backupFile.name,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = Color.White
+                                                )
+                                                val dateFormatted = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm:ss", java.util.Locale.getDefault())
+                                                    .format(java.util.Date(backupFile.lastModified()))
+                                                Text(
+                                                    text = "${backupFile.length() / 1024} KB • $dateFormatted",
+                                                    fontSize = 10.sp,
+                                                    color = Color.White.copy(alpha = 0.6f)
+                                                )
+                                            }
+
+                                            Button(
+                                                onClick = { selectedBackupToRestore = backupFile },
+                                                colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
+                                                shape = RoundedCornerShape(8.dp),
+                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                                modifier = Modifier.testTag("btn_restore_${backupFile.name}")
+                                            ) {
+                                                Icon(imageVector = Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(14.dp))
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text(
+                                                    text = if (currentLanguage == AppLanguage.IT) "Ripristina" else "Restore",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Dialog di conferma ripristino
+                        selectedBackupToRestore?.let { file ->
+                            AlertDialog(
+                                onDismissRequest = { selectedBackupToRestore = null },
+                                title = {
+                                    Text(
+                                        text = if (currentLanguage == AppLanguage.IT) "Conferma Ripristino Dati" else "Confirm Data Restore",
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                },
+                                text = {
+                                    Text(
+                                        text = if (currentLanguage == AppLanguage.IT)
+                                            "Vuoi ripristinare i dati dal file:\n\n${file.name}\n\nI dati attuali verranno integrati e aggiornati con la nuova struttura e il motore vettoriale ONNX."
+                                        else
+                                            "Do you want to restore data from:\n\n${file.name}?\n\nCurrent data will be merged and ONNX vector embeddings regenerated."
+                                    )
+                                },
+                                confirmButton = {
+                                    Button(
+                                        onClick = {
+                                            viewModel.restoreBackup(file)
+                                            selectedBackupToRestore = null
+                                        },
+                                        colors = ButtonDefaults.buttonColors(containerColor = SagePrimary)
+                                    ) {
+                                        Text(if (currentLanguage == AppLanguage.IT) "Sì, Ripristina" else "Yes, Restore", color = Color.White)
+                                    }
+                                },
+                                dismissButton = {
+                                    TextButton(onClick = { selectedBackupToRestore = null }) {
+                                        Text(if (currentLanguage == AppLanguage.IT) "Annulla" else "Cancel")
+                                    }
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Sezione Diagnostica Promemoria Scongelamento (spostata da I Miei Piani)
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = CartaDaZucchero.copy(alpha = 0.2f),
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsActive,
+                                        contentDescription = null,
+                                        tint = CartaDaZucchero,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = AppStrings.defrostDiagnostics(currentLanguage),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (currentLanguage == AppLanguage.IT)
+                                        "Verifica stato promemoria, orari pianificati e test allarmi"
+                                    else
+                                        "Check reminders status, scheduled times and test alarms",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = Color.White.copy(alpha = 0.65f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        OutlinedButton(
+                            onClick = { showDefrostDiagnostics = true },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("btn_settings_defrost_diagnostics"),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.NotificationsActive,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = CartaDaZucchero
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = if (currentLanguage == AppLanguage.IT) "Apri Diagnostica Scongelamento" else "Open Defrost Diagnostics",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                        }
+                    }
+                }
+            }
+
             // Sezione Versione
             item {
                 Surface(
@@ -681,6 +1002,13 @@ fun SettingsScreen(
                 }
             }
         }
+    }
+
+    if (showDefrostDiagnostics) {
+        DefrostDiagnosticsBottomSheet(
+            viewModel = viewModel,
+            onDismiss = { showDefrostDiagnostics = false }
+        )
     }
 }
 

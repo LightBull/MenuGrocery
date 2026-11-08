@@ -37,6 +37,7 @@ import com.google.firebase.auth.FirebaseUser
 class MealPlanViewModel(application: Application) : AndroidViewModel(application) {
 
     private val repository: MealPlanRepository
+    val onnxVectorService: com.example.data.vector.OnnxVectorService
     val authRepository: AuthRepository = AuthRepository(application)
     val subscriptionManager: SubscriptionManager get() = repository.subscriptionManager
     val subscriptionState: StateFlow<UserSubscriptionState> get() = subscriptionManager.subscriptionState
@@ -145,6 +146,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     init {
         val db = MealPlanDatabase.getDatabase(application)
         repository = MealPlanRepository(db, application)
+        onnxVectorService = com.example.data.vector.OnnxVectorService(application, db.foodEmbeddingDao())
 
         // Feedback in caso di aggiornamento schema con ripristino da backup
         com.example.data.local.DatabaseMigrationManager.lastMigrationSummary?.let { summary ->
@@ -462,6 +464,11 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     fun deletePlan(plan: MealPlanEntity) {
         viewModelScope.launch {
             repository.deletePlan(plan)
+            loadMealsForSelectedDay()
+            _userFeedbackMessage.value = if (currentLanguage.value == com.example.data.model.AppLanguage.IT)
+                "Piano '${plan.title}' eliminato."
+            else
+                "Plan '${plan.title}' deleted."
         }
     }
 
@@ -592,6 +599,41 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             loadMealsForSelectedDay()
             loadDefrostDiagnostics()
             _userFeedbackMessage.value = "Database ricreato e ripopolato secondo l'ultima versione!"
+        }
+    }
+
+    private val _availableBackups = MutableStateFlow<List<java.io.File>>(emptyList())
+    val availableBackups: StateFlow<List<java.io.File>> = _availableBackups.asStateFlow()
+
+    fun loadAvailableBackups() {
+        viewModelScope.launch {
+            _availableBackups.value = repository.getAvailableBackups()
+        }
+    }
+
+    fun createManualBackup() {
+        viewModelScope.launch {
+            val file = repository.createManualBackup()
+            if (file != null) {
+                loadAvailableBackups()
+                _userFeedbackMessage.value = "Backup creato con successo: ${file.name}"
+            } else {
+                _userFeedbackMessage.value = "Errore durante la creazione del backup"
+            }
+        }
+    }
+
+    fun restoreBackup(backupFile: java.io.File) {
+        viewModelScope.launch {
+            val success = repository.restoreFromBackup(backupFile)
+            if (success) {
+                loadMealsForSelectedDay()
+                loadDefrostDiagnostics()
+                loadAvailableBackups()
+                _userFeedbackMessage.value = "Dati ripristinati con successo da: ${backupFile.name} (con embedding ONNX)!"
+            } else {
+                _userFeedbackMessage.value = "Errore durante il ripristino del backup"
+            }
         }
     }
 

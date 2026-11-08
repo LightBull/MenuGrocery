@@ -12,9 +12,10 @@ import androidx.room.TypeConverters
         MealEntity::class,
         MealFoodItemEntity::class,
         ShoppingListItemEntity::class,
-        AppSettingEntity::class
+        AppSettingEntity::class,
+        FoodEmbeddingEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(MealPlanConverters::class)
@@ -24,9 +25,10 @@ abstract class MealPlanDatabase : RoomDatabase() {
     abstract fun mealFoodItemDao(): MealFoodItemDao
     abstract fun shoppingListDao(): ShoppingListDao
     abstract fun appSettingDao(): AppSettingDao
+    abstract fun foodEmbeddingDao(): FoodEmbeddingDao
 
     companion object {
-        const val DATABASE_VERSION = 3
+        const val DATABASE_VERSION = 4
         const val DATABASE_NAME = "mealplan_database"
 
         @Volatile

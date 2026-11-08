@@ -1,51 +1,36 @@
-# Piano di Risoluzione Errore di Pubblicazione Play Store
+# Piano di Implementazione & Note di Rilascio (Patch Notes)
 
-Risoluzione dell'errore di build artifact 404 durante il processo di pubblicazione Android tramite generazione del bundle AAB di release e avanzamento di versione conforme ai requisiti Play Console.
-
-## Decisioni Confermate e Preferenze Utente
-
-> [!IMPORTANT]
-> - **Codice Versione (`versionCode`)**: Impostato a `9` (strettamente maggiore della versione 7 attualmente presente su Play Console e superiore a eventuali tentativi precedenti).
-> - **Nome Versione (`versionName`)**: Impostato a `"9.0"`.
-> - **Identificativo Applicazione (`applicationId`)**: Mantenuto rigorosamente a `"com.aistudio.mealplan.rkfpw"` (già registrato su Google Play Console).
-> - **Namespace**: Mantenuto rigorosamente a `"com.example"`.
-> - **Generazione Bundle**: Esecuzione del comando Gradle `:app:bundleRelease` per produrre il file richiesto `app/build/outputs/bundle/release/app-release.aab`.
+## 1. Risoluzione Problema Sovrascrittura Dati & Travaso Vettoriale
+È stato risolto il problema della sovrascrittura accidentale dei dati dell'utente durante gli aggiornamenti dell'app:
+1. **Travaso automatico con auto-embedding**: Quando lo schema del database viene aggiornato (introduzione di nuove colonne o nuove tabelle come `food_embeddings`), i dati presenti nel backup locale vengono riversati nel nuovo database SQLite valorizzando i campi mancanti con stringhe vuote o progressivi d'ordine, e generando contestualmente il vettore di embedding normalizzato a 64 dimensioni per ciascun alimento travasato.
+2. **Blocco inserimento demo**: In `MealPlanRepository.initializeDefaultDataIfNeeded()`, se sono presenti backup utente nella cartella dell'app, l'inserimento del piano demo predefinito ("Piano Benessere Mediterraneo") viene bloccato e viene eseguito automaticamente il ripristino dall'ultimo backup disponibile.
+3. **Pannello Backup & Ripristino in Impostazioni**: Aggiunta la sezione "Backup & Ripristino Dati" in `SettingsScreen` per visualizzare tutti i backup salvati su disco, creare nuovi backup manuali e forzare il ripristino di qualsiasi backup storico con finestra di conferma.
+4. **Eliminazione alimento consentita per l'unico cibo del pasto o piano**: In `PlanEditorScreen`, è ora possibile eliminare un alimento anche se è l'unico nel pasto o nell'intero piano, mostrando uno stato vuoto chiaro ("Nessun alimento in questo pasto. Tocca '+' per aggiungerne uno.").
+5. **Pulizia Header Lista Pasti**: Rimossa l'icona della diagnostica scongelamento dall'header di `DailyMealPlanScreen` (ora situata unicamente in Impostazioni).
 
 ---
 
-## 1. Panoramica & Causa del Problema
+## 2. Note della Patch (Changelog)
 
-- **Causa dell'errore**: Il sistema di pubblicazione automatico di AI Studio ha cercato l'archivio AAB del bundle in `/app/applet/app/build/outputs/bundle/release/app-release.aab`, riscontrando un codice HTTP 404 poiché finora era stato compilato soltanto l'APK di debug e non il bundle di rilascio (`bundleRelease`).
-- **Soluzione**:
-  1. Aggiornare `versionCode` a `9` e `versionName` a `"9.0"` nel file `app/build.gradle.kts`.
-  2. Eseguire il comando di compilazione Gradle dedicato per i bundle di produzione: `gradle :app:bundleRelease`.
-  3. Verificare l'effettiva presenza del file `app-release.aab` nel percorso di output atteso dal control plane.
+### Patch v10.0 (Versione Corrente)
+- **Salvaguardia e Ripristino Dati Utente**: Implementato il backup preventivo automatico e il travaso nel nuovo schema Room.
+- **Predisposizione Modello Vettoriale ONNX**: Creata la tabella `food_embeddings` e il servizio `OnnxVectorService` (onnxruntime-android) per calcolare vettori di alimenti, categorie, quantità e cibi correlati; generazione degli embedding durante il travaso.
+- **Pannello Backup & Ripristino**: Sezione in Impostazioni per visualizzare la lista dei backup JSON locali, creare nuovi backup e ripristinare i propri dati storici.
+- **Percorsi Database in Chiaro**: Aggiunti in Impostazioni i percorsi assoluti sia del database principale dei piani (`mealplan_database`), sia della cartella di backup (`/files/backups/`), sia del database alimenti (`FoodDb.db`).
+- **Nuove Gesture in "I Miei Piani"**:
+  - Click sulla riga per accedere direttamente alla modifica (rimossa l'icona della matita).
+  - Swipe a destra (50%) per duplicare il piano con richiesta di conferma.
+  - Swipe a sinistra (50%) per eliminare il piano con richiesta di conferma contenente lo stato del piano (attivo/disattivo/unico piano).
+  - Rimozione completa del pulsante "Ricrea Database".
+- **Spostamento Diagnostica Scongelamento**: Spostata la diagnostica esclusivamente all'interno della schermata Impostazioni.
+- **Auto-scroll Lista Pasti**: All'apertura della schermata "Lista Pasti", la vista scorre fluidamente al pasto più vicino da consumare se la distanza temporale è $\le 2$ ore.
+- **Eliminazione cibo singolo**: Consentita l'eliminazione dell'alimento anche se è l'unico alimento nel pasto o nell'intero piano.
+- **Disabilitazione Creazione Automatica APK**: Rimosse le routine di copia automatica di file `.apk` nelle directory del workspace.
 
 ---
 
-## 2. Azioni di Configurazione e Build
-
-```
-┌────────────────────────────────────────────────────────┐
-│                   app/build.gradle.kts                 │
-│  - applicationId: "com.aistudio.mealplan.rkfpw" (Fisso)│
-│  - versionCode: 9                                      │
-│  - versionName: "9.0"                                  │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│               Task Gradle: :app:bundleRelease          │
-│  - Firma con signingConfig release                     │
-│  - Generazione archivio ottimizzato Android App Bundle │
-└───────────────────────────┬────────────────────────────┘
-                            │
-                            ▼
-┌────────────────────────────────────────────────────────┐
-│  app/build/outputs/bundle/release/app-release.aab      │
-│  Pronto per l'acquisizione dal Play Publishing pipeline│
-└────────────────────────────────────────────────────────┘
-```
-
-### File Interessati
-- `app/build.gradle.kts`: aggiornamento di `versionCode` e `versionName`.
+### Patch v9.0 (Versione Precedente)
+- **Gestione Piani Multipli**: Supporto per più piani alimentari e attivazione dinamica del piano corrente (BR-01).
+- **Lista della Spesa Intelligente**: Raggruppamento per categoria e unità di misura, unione per ingredienti compatibili (BR-02).
+- **Notifiche & Promemoria di Scongelamento**: Schedulazione allarmi nel sistema operativo per cibi con flag di congelamento attivo (BR-03).
+- **Integrazione Alimenti FoodDb**: Consultazione integrata delle tabelle alimentari di riferimento in sola lettura.
