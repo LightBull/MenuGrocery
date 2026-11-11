@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.CircularProgressIndicator
 import com.example.ui.components.AppUpdateDialog
+import com.example.ui.components.WhatsNewDialog
 import com.example.util.AppUpdateHelper
 import com.example.data.model.AppReleaseNotesProvider
 import com.example.data.model.ReleaseInfo
@@ -106,6 +107,7 @@ fun SettingsScreen(
     val cloudAndLoginEnabled = false
     var showDefrostDiagnostics by remember { mutableStateOf(false) }
     var showReleaseNotesDialog by remember { mutableStateOf<ReleaseInfo?>(null) }
+    var availableUpdateVersion by remember { mutableStateOf<Int?>(null) }
     var isCheckingUpdates by remember { mutableStateOf(false) }
 
     BackHandler {
@@ -1024,7 +1026,7 @@ fun SettingsScreen(
                                         context = context,
                                         onUpdateAvailable = { availableVersion ->
                                             isCheckingUpdates = false
-                                            showReleaseNotesDialog = AppReleaseNotesProvider.getReleaseInfo(availableVersion)
+                                            availableUpdateVersion = availableVersion
                                         },
                                         onNoUpdateAvailable = {
                                             isCheckingUpdates = false
@@ -1121,15 +1123,23 @@ fun SettingsScreen(
         )
     }
 
-    showReleaseNotesDialog?.let { releaseInfo ->
+    availableUpdateVersion?.let { newVersionCode ->
         AppUpdateDialog(
-            releaseInfo = releaseInfo,
+            availableVersionCode = newVersionCode,
             lang = currentLanguage,
-            onDismiss = { showReleaseNotesDialog = null },
+            onDismiss = { availableUpdateVersion = null },
             onConfirmUpdate = {
-                showReleaseNotesDialog = null
+                availableUpdateVersion = null
                 AppUpdateHelper.openPlayStore(context)
             }
+        )
+    }
+
+    showReleaseNotesDialog?.let { releaseInfo ->
+        WhatsNewDialog(
+            releaseInfo = releaseInfo,
+            lang = currentLanguage,
+            onConfirm = { showReleaseNotesDialog = null }
         )
     }
 }

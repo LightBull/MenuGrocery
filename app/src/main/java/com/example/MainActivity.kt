@@ -98,17 +98,24 @@ fun MealPlanAppRoot(
 
     val isEditorDirty by viewModel.isEditorDirty.collectAsState()
     val isPlanEditorOpen by viewModel.isPlanEditorOpen.collectAsState()
-
     val context = androidx.compose.ui.platform.LocalContext.current
-    var availableUpdateInfo by remember { mutableStateOf<com.example.data.model.ReleaseInfo?>(null) }
+    var availableUpdateVersionCode by remember { mutableStateOf<Int?>(null) }
+    var whatsNewReleaseInfo by remember { mutableStateOf<com.example.data.model.ReleaseInfo?>(null) }
 
-    // Controllo automatico disponibilità aggiornamenti all'avvio dell'app
+    // 1. Mostra le novità della nuova versione al primo avvio dopo l'aggiornamento
+    LaunchedEffect(Unit) {
+        if (!com.example.util.AppUpdateHelper.hasSeenWhatsNewForCurrentVersion(context)) {
+            val currentCode = com.example.util.AppUpdateHelper.getCurrentVersionCode(context)
+            whatsNewReleaseInfo = com.example.data.model.AppReleaseNotesProvider.getReleaseInfo(currentCode)
+        }
+    }
+
+    // 2. Controllo automatico disponibilità aggiornamenti all'avvio dell'app
     LaunchedEffect(Unit) {
         com.example.util.AppUpdateHelper.checkForUpdate(
             context = context,
             onUpdateAvailable = { availableVersionCode ->
-                val release = com.example.data.model.AppReleaseNotesProvider.getReleaseInfo(availableVersionCode)
-                availableUpdateInfo = release
+                availableUpdateVersionCode = availableVersionCode
             }
         )
     }
@@ -334,15 +341,27 @@ fun MealPlanAppRoot(
         }
     }
 
-    // Dialog informativo aggiornamento disponibile con elenco novità
-    availableUpdateInfo?.let { releaseInfo ->
+    // Dialog informativo disponibilità aggiornamento (solo versione + Aggiorna + Chiudi)
+    availableUpdateVersionCode?.let { newVersionCode ->
         com.example.ui.components.AppUpdateDialog(
+            availableVersionCode = newVersionCode,
+            lang = currentLanguage,
+            onDismiss = { availableUpdateVersionCode = null },
+            onConfirmUpdate = {
+                availableUpdateVersionCode = null
+                com.example.util.AppUpdateHelper.openPlayStore(context)
+            }
+        )
+    }
+
+    // Dialog novità introdotte nella versione installata (mostrato al primo avvio)
+    whatsNewReleaseInfo?.let { releaseInfo ->
+        com.example.ui.components.WhatsNewDialog(
             releaseInfo = releaseInfo,
             lang = currentLanguage,
-            onDismiss = { availableUpdateInfo = null },
-            onConfirmUpdate = {
-                availableUpdateInfo = null
-                com.example.util.AppUpdateHelper.openPlayStore(context)
+            onConfirm = {
+                com.example.util.AppUpdateHelper.markWhatsNewSeenForCurrentVersion(context)
+                whatsNewReleaseInfo = null
             }
         )
     }

@@ -1,23 +1,16 @@
 package com.example.ui.components
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.NewReleases
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -34,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AppLanguage
@@ -41,15 +35,21 @@ import com.example.data.model.ReleaseInfo
 import com.example.ui.theme.SagePrimary
 import com.example.ui.theme.SagePrimaryContainer
 
+/**
+ * Dialog di notifica disponibilità aggiornamento su Google Play Store.
+ * Mostra solo la nuova versione disponibile con i tasti "Aggiorna" e "Chiudi",
+ * senza anticipare le novità della nuova versione non ancora installata.
+ */
 @Composable
 fun AppUpdateDialog(
-    releaseInfo: ReleaseInfo,
+    availableVersionCode: Int,
+    availableVersionName: String? = null,
     lang: AppLanguage,
     onDismiss: () -> Unit,
     onConfirmUpdate: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val scrollState = rememberScrollState()
+    val displayVersion = availableVersionName ?: "$availableVersionCode.0"
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -57,7 +57,7 @@ fun AppUpdateDialog(
         icon = {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
+                    .size(54.dp)
                     .clip(CircleShape)
                     .background(SagePrimaryContainer),
                 contentAlignment = Alignment.Center
@@ -66,7 +66,7 @@ fun AppUpdateDialog(
                     imageVector = Icons.Default.SystemUpdate,
                     contentDescription = null,
                     tint = SagePrimary,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
         },
@@ -78,94 +78,35 @@ fun AppUpdateDialog(
                 Text(
                     text = if (lang == AppLanguage.IT) "Aggiornamento Disponibile" else "Update Available",
                     style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = SagePrimary.copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "v${releaseInfo.versionName} • ${releaseInfo.releaseDate}",
+                        text = if (lang == AppLanguage.IT) "Nuova versione: v$displayVersion" else "New version: v$displayVersion",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = SagePrimary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp)
                     )
                 }
             }
         },
         text = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(scrollState)
-            ) {
-                Text(
-                    text = if (lang == AppLanguage.IT)
-                        "È disponibile una nuova versione di MealPlan con importanti miglioramenti e novità."
-                    else
-                        "A new version of MealPlan is available with key improvements and new features.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.NewReleases,
-                                contentDescription = null,
-                                tint = SagePrimary,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = if (lang == AppLanguage.IT) "Novità introdotte:" else "What's new:",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-
-                        val highlights = releaseInfo.getLocalizedHighlights(lang)
-                        highlights.forEach { itemText ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = SagePrimary,
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .padding(top = 2.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = itemText,
-                                    fontSize = 12.sp,
-                                    lineHeight = 16.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-            }
+            Text(
+                text = if (lang == AppLanguage.IT)
+                    "È disponibile una nuova versione di MealPlan su Google Play Store con importanti novità e ottimizzazioni. Vuoi aggiornare adesso?"
+                else
+                    "A new version of MealPlan is available on Google Play Store with key features and optimizations. Would you like to update now?",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
         },
         confirmButton = {
             Button(
@@ -175,7 +116,7 @@ fun AppUpdateDialog(
                 modifier = Modifier.testTag("btn_confirm_update_app")
             ) {
                 Text(
-                    text = if (lang == AppLanguage.IT) "Aggiorna ora" else "Update now",
+                    text = if (lang == AppLanguage.IT) "Aggiorna" else "Update",
                     fontWeight = FontWeight.Bold,
                     color = Color.White
                 )
@@ -187,10 +128,31 @@ fun AppUpdateDialog(
                 modifier = Modifier.testTag("btn_dismiss_update_app")
             ) {
                 Text(
-                    text = if (lang == AppLanguage.IT) "Più tardi" else "Later",
+                    text = if (lang == AppLanguage.IT) "Chiudi" else "Close",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    )
+}
+
+/**
+ * Sovraccarico per retrocompatibilità qualora venga passato un oggetto ReleaseInfo.
+ */
+@Composable
+fun AppUpdateDialog(
+    releaseInfo: ReleaseInfo,
+    lang: AppLanguage,
+    onDismiss: () -> Unit,
+    onConfirmUpdate: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    AppUpdateDialog(
+        availableVersionCode = releaseInfo.versionCode,
+        availableVersionName = releaseInfo.versionName,
+        lang = lang,
+        onDismiss = onDismiss,
+        onConfirmUpdate = onConfirmUpdate,
+        modifier = modifier
     )
 }

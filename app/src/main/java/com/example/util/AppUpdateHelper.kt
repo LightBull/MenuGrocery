@@ -15,6 +15,27 @@ object AppUpdateHelper {
 
     private const val TAG = "AppUpdateHelper"
     private const val PLAY_STORE_PACKAGE_NAME = "com.aistudio.mealplan.rkfpw"
+    private const val PREFS_NAME = "meal_plan_prefs"
+    private const val KEY_LAST_SEEN_WHATS_NEW = "last_seen_whats_new_version_code"
+
+    /**
+     * Verifica se le novità della versione attualmente installata sono già state visualizzate dall'utente.
+     */
+    fun hasSeenWhatsNewForCurrentVersion(context: Context): Boolean {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val lastSeenCode = prefs.getInt(KEY_LAST_SEEN_WHATS_NEW, -1)
+        val currentCode = getCurrentVersionCode(context)
+        return lastSeenCode >= currentCode
+    }
+
+    /**
+     * Segna le novità della versione attualmente installata come già visualizzate.
+     */
+    fun markWhatsNewSeenForCurrentVersion(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val currentCode = getCurrentVersionCode(context)
+        prefs.edit().putInt(KEY_LAST_SEEN_WHATS_NEW, currentCode).apply()
+    }
 
     /**
      * Controlla asincronamente se è disponibile un aggiornamento dell'app su Google Play Store.

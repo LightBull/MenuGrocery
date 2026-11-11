@@ -16,6 +16,40 @@ object AppReleaseNotesProvider {
 
     val RELEASES: List<ReleaseInfo> = listOf(
         ReleaseInfo(
+            versionCode = 14,
+            versionName = "14.0",
+            releaseDate = "Novembre 2026",
+            highlightsIt = listOf(
+                "Aggiornamento della modalità di notifica degli aggiornamenti (finestra con versione, tasto Aggiorna e Chiudi)",
+                "Nuovo dialogo modale con le novità introdotte visualizzato al primo avvio della nuova versione",
+                "Ottimizzazioni generali e miglioramenti di compatibilità per la pubblicazione su Google Play"
+            ),
+            highlightsEn = listOf(
+                "Updated in-app update notification (clean modal with version, Update and Close buttons)",
+                "New dedicated What's New modal dialog presented on first launch of newly installed version",
+                "General optimizations and Google Play publishing compatibility improvements"
+            )
+        ),
+        ReleaseInfo(
+            versionCode = 13,
+            versionName = "13.0",
+            releaseDate = "Novembre 2026",
+            highlightsIt = listOf(
+                "Nuova gestione temporale della gradualità a step con salvataggio delle date e pesi da minimo a massimo",
+                "Confronto dinamico e allineamento trasparente tra peso reale nel piano e pianificazione teorica",
+                "Possibilità di eliminare completamente la configurazione di gradualità da un piano",
+                "Campo dedicato per impostare e modificare il peso iniziale minimo di ciascun alimento",
+                "Miglioramento dell'esperienza di aggiornamento e visualizzazione delle novità di versione"
+            ),
+            highlightsEn = listOf(
+                "New step-based temporal graduality schedule from minimum to maximum target",
+                "Dynamic comparison and seamless alignment between actual meal plan weights and planned schedule",
+                "Ability to completely delete graduality configuration from a meal plan",
+                "Dedicated field to set and edit the initial minimum weight for each food",
+                "Improved app update workflow and what's new onboarding experience"
+            )
+        ),
+        ReleaseInfo(
             versionCode = 12,
             versionName = "12.0",
             releaseDate = "Novembre 2026",

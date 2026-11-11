@@ -419,5 +419,37 @@ class ExampleRobolectricTest {
         val comparisonsAfter = repository.getGradualityComparisons(planId)
         assertTrue("Dopo l'allineamento il piano deve risultare in linea", comparisonsAfter[0].isAligned)
     }
+
+    @Test
+    fun `whats new tracking displays on new version and remembers confirmation`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val prefs = context.getSharedPreferences("meal_plan_prefs", Context.MODE_PRIVATE)
+        prefs.edit().clear().commit()
+
+        // 1. Al primo avvio della nuova versione, non deve ancora risultare visto
+        assertFalse(
+            "Al primo avvio le novita non devono risultare viste",
+            com.example.util.AppUpdateHelper.hasSeenWhatsNewForCurrentVersion(context)
+        )
+
+        // 2. L'utente preme Ok
+        com.example.util.AppUpdateHelper.markWhatsNewSeenForCurrentVersion(context)
+
+        // 3. Ora deve risultare visto (True)
+        assertTrue(
+            "Dopo la conferma le novita devono risultare viste",
+            com.example.util.AppUpdateHelper.hasSeenWhatsNewForCurrentVersion(context)
+        )
+
+        // 4. Se in futuro viene rilasciata una nuova versione (es. versionCode precedente era 12, nuova è 13)
+        prefs.edit().putInt("last_seen_whats_new_version_code", 12).commit()
+        val currentCode = com.example.util.AppUpdateHelper.getCurrentVersionCode(context)
+        if (currentCode > 12) {
+            assertFalse(
+                "Con una nuova versione piu alta, il flag riparte da False",
+                com.example.util.AppUpdateHelper.hasSeenWhatsNewForCurrentVersion(context)
+            )
+        }
+    }
 }
 
