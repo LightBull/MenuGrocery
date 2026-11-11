@@ -19,6 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import com.example.data.model.GradualityPlanConfig
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
@@ -100,6 +102,7 @@ fun MealPlansManagementScreen(
             initialTitle = plan.title,
             initialNotes = plan.notes,
             initialIsActive = plan.id == activePlan?.id,
+            initialGradualityConfigJson = plan.gradualityConfigJson,
             viewModel = viewModel,
             onBack = { editingPlan = null },
             onNavigateToTab = { targetTab ->
@@ -408,11 +411,49 @@ fun SwipeableMealPlanCard(
                             Spacer(modifier = Modifier.height(4.dp))
                         }
 
-                        Text(
-                            text = com.example.ui.i18n.AppStrings.translatePlanTitle(plan.title, lang),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
+                        val hasGraduality = remember(plan.gradualityConfigJson) {
+                            GradualityPlanConfig.fromJsonString(plan.gradualityConfigJson).hasActiveGraduality()
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = com.example.ui.i18n.AppStrings.translatePlanTitle(plan.title, lang),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+
+                            if (hasGraduality) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = SagePrimaryContainer,
+                                    modifier = Modifier.testTag("badge_graduality_${plan.id}")
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                            contentDescription = if (lang == com.example.data.model.AppLanguage.IT) "Gradualità attiva" else "Graduality active",
+                                            tint = SagePrimary,
+                                            modifier = Modifier.size(13.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(3.dp))
+                                        Text(
+                                            text = if (lang == com.example.data.model.AppLanguage.IT) "Gradualità" else "Graduality",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = SagePrimary
+                                        )
+                                    }
+                                }
+                            }
+                        }
 
                         val dateStr = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(plan.createdAt))
                         Text(

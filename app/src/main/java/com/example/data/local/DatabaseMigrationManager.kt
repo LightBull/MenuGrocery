@@ -27,7 +27,7 @@ object DatabaseMigrationManager {
 
     private const val TAG = "DbMigrationManager"
     const val DB_NAME = "mealplan_database"
-    const val TARGET_VERSION = 4
+    const val TARGET_VERSION = 5
 
     private const val PENDING_RESTORE_FILE_NAME = "pending_migration_restore.json"
 

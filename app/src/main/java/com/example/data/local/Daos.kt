@@ -41,6 +41,9 @@ interface MealPlanDao {
     @Query("UPDATE meal_plans SET isActive = 1 WHERE id = :planId")
     suspend fun markPlanActive(planId: String)
 
+    @Query("UPDATE meal_plans SET gradualityConfigJson = :configJson WHERE id = :planId")
+    suspend fun updateGradualityConfig(planId: String, configJson: String?)
+
     // BR-01: Isolamento del Piano - transazione che garantisce un solo piano attivo
     @Transaction
     suspend fun setActivePlan(planId: String) {
@@ -110,6 +113,9 @@ interface MealFoodItemDao {
 
     @Query("DELETE FROM meal_food_items WHERE id = :id")
     suspend fun deleteItemById(id: String)
+
+    @Query("UPDATE meal_food_items SET quantity = :newQuantity WHERE id = :id")
+    suspend fun updateQuantity(id: String, newQuantity: Double)
 }
 
 @Dao

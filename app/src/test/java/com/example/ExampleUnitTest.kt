@@ -88,4 +88,40 @@ class ExampleUnitTest {
         assertEquals(200.0, item.pantryQuantity, 0.001)
         assertEquals("Lun, Mer", item.sourceDays)
     }
+
+    @Test
+    fun testGradualityGroupConfigCalculations() {
+        val now = 100_000_000L
+        val group = com.example.data.model.GradualityGroupConfig(
+            groupKey = "pane|80.0|GRAMS",
+            foodName = "Pane",
+            unit = QuantityUnit.GRAMS,
+            category = "GRAINS_PASTA",
+            targetMealTypes = listOf(MealType.LUNCH, MealType.DINNER),
+            targetDays = listOf(1, 2, 4, 5),
+            isEnabled = true,
+            minQuantity = 80.0,
+            maxQuantity = 100.0,
+            incrementStep = 10.0,
+            cadenceDays = 14,
+            startDateMillis = now,
+            currentAppliedQuantity = 80.0
+        )
+
+        val steps = group.generateScheduledSteps()
+        assertEquals(2, steps.size)
+        assertEquals(80.0, steps[0].fromQuantity, 0.001)
+        assertEquals(90.0, steps[0].toQuantity, 0.001)
+        assertEquals(now + 14 * 86_400_000L, steps[0].dateMillis)
+        assertEquals(90.0, steps[1].fromQuantity, 0.001)
+        assertEquals(100.0, steps[1].toQuantity, 0.001)
+        assertEquals(now + 28 * 86_400_000L, steps[1].dateMillis)
+
+        // Verifica calcolo teorico
+        assertEquals(80.0, group.calculateTheoreticalWeight(now), 0.001)
+        assertEquals(80.0, group.calculateTheoreticalWeight(now + 5 * 86_400_000L), 0.001)
+        assertEquals(90.0, group.calculateTheoreticalWeight(now + 15 * 86_400_000L), 0.001)
+        assertEquals(100.0, group.calculateTheoreticalWeight(now + 30 * 86_400_000L), 0.001)
+        assertEquals(100.0, group.calculateTheoreticalWeight(now + 60 * 86_400_000L), 0.001) // Non supera il max!
+    }
 }

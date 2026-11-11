@@ -14,7 +14,8 @@ data class MealPlanEntity(
     val title: String,
     val isActive: Boolean, // BR-01: solo 1 attivo
     val createdAt: Long,
-    val notes: String? = null
+    val notes: String? = null,
+    val gradualityConfigJson: String? = null
 )
 
 @Entity(

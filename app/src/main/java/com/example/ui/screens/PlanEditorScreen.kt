@@ -33,6 +33,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import com.example.data.model.GradualityPlanConfig
 import androidx.compose.material.icons.filled.AcUnit
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -61,6 +63,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
@@ -128,6 +131,7 @@ fun PlanEditorScreen(
     initialTitle: String = "",
     initialNotes: String? = null,
     initialIsActive: Boolean = false,
+    initialGradualityConfigJson: String? = null,
     viewModel: MealPlanViewModel,
     onBack: () -> Unit,
     onNavigateToTab: ((Int) -> Unit)? = null,
@@ -207,6 +211,11 @@ fun PlanEditorScreen(
     var showCopyDayDialog by remember { mutableStateOf(false) }
     // Dialog copia intero pasto (Target Meal)
     var copyingMealTarget by remember { mutableStateOf<MealWithItems?>(null) }
+    // Configurazione gradualità del piano
+    var gradualityConfig by remember(initialGradualityConfigJson) {
+        mutableStateOf(GradualityPlanConfig.fromJsonString(initialGradualityConfigJson))
+    }
+    var showGradualityScreen by remember { mutableStateOf(false) }
 
     val searchResults by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
@@ -217,6 +226,10 @@ fun PlanEditorScreen(
             val loadedMap = viewModel.loadPlanWithAllDaysMeals(planId)
             loadedMap.forEach { (day, meals) ->
                 daysMealsMap[day] = meals
+            }
+            val existing = viewModel.getPlanById(planId)
+            if (!existing?.gradualityConfigJson.isNullOrBlank()) {
+                gradualityConfig = GradualityPlanConfig.fromJsonString(existing.gradualityConfigJson)
             }
         } else {
             for (day in 1..7) {
@@ -231,6 +244,26 @@ fun PlanEditorScreen(
             }
         }
         isLoaded = true
+    }
+
+    if (showGradualityScreen) {
+        GradualityManagementScreen(
+            daysMeals = daysMealsMap.toMap(),
+            initialConfig = gradualityConfig,
+            lang = currentLanguage,
+            onBack = { showGradualityScreen = false },
+            onSave = { updated ->
+                gradualityConfig = updated
+                isDirty = true
+                showGradualityScreen = false
+            },
+            onDeleteGraduality = {
+                gradualityConfig = GradualityPlanConfig(emptyList())
+                isDirty = true
+                showGradualityScreen = false
+            }
+        )
+        return
     }
 
     // Dialog di conferma salvataggio modifiche all'uscita accidentale o cambio menu
@@ -267,6 +300,7 @@ fun PlanEditorScreen(
                                 notes = planNotes,
                                 setAsActive = setAsActive,
                                 daysMeals = daysMealsMap.toMap(),
+                                gradualityConfigJson = if (gradualityConfig.hasActiveGraduality()) gradualityConfig.toJsonString() else null,
                                 onComplete = {
                                     isDirty = false
                                     viewModel.setEditorDirty(false)
@@ -457,6 +491,7 @@ fun PlanEditorScreen(
                                 notes = planNotes,
                                 setAsActive = setAsActive,
                                 daysMeals = daysMealsMap.toMap(),
+                                gradualityConfigJson = if (gradualityConfig.hasActiveGraduality()) gradualityConfig.toJsonString() else null,
                                 onComplete = {
                                     isDirty = false
                                     onBack()
@@ -598,26 +633,44 @@ fun PlanEditorScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
 
-                        OutlinedButton(
-                            onClick = { showCopyDayDialog = true },
-                            enabled = totalFoodsInDay > 0,
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                            modifier = Modifier.testTag("btn_copy_entire_day")
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.ContentCopy,
-                                contentDescription = null,
-                                modifier = Modifier.size(15.dp),
-                                tint = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedButton(
+                                onClick = { showGradualityScreen = true },
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.testTag("btn_manage_graduality")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                    contentDescription = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Gestione gradualità" else "Graduality management",
+                                    tint = SagePrimary,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
+
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                            )
+
+                            OutlinedButton(
+                                onClick = { showCopyDayDialog = true },
+                                enabled = totalFoodsInDay > 0,
+                                shape = RoundedCornerShape(10.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                modifier = Modifier.testTag("btn_copy_entire_day")
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.ContentCopy,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(15.dp),
+                                    tint = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                )
+                            }
                         }
                     }
                 }

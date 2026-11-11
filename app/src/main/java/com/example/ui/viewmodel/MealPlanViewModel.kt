@@ -15,6 +15,7 @@ import com.example.data.model.NutritionalSummary
 import com.example.data.model.QuantityUnit
 import com.example.data.repository.MealPlanRepository
 import com.example.notification.DefrostScheduler
+import com.example.data.model.GradualityItemComparison
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -77,6 +78,9 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
     // Giorni selezionati per la lista della spesa
     private val _selectedShoppingDays = MutableStateFlow<Set<Int>>((1..7).toSet())
     val selectedShoppingDays: StateFlow<Set<Int>> = _selectedShoppingDays.asStateFlow()
+
+    private val _gradualityComparisons = MutableStateFlow<List<GradualityItemComparison>>(emptyList())
+    val gradualityComparisons: StateFlow<List<GradualityItemComparison>> = _gradualityComparisons.asStateFlow()
 
     private val prefs = application.getSharedPreferences("meal_plan_prefs", android.content.Context.MODE_PRIVATE)
     private val _currentLanguage = MutableStateFlow(
@@ -193,6 +197,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             activePlan.collect {
                 loadMealsForSelectedDay()
                 loadDefrostDiagnostics()
+                loadGradualityComparisons()
             }
         }
     }
@@ -430,6 +435,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
         notes: String?,
         setAsActive: Boolean,
         daysMeals: Map<Int, List<MealWithItems>>,
+        gradualityConfigJson: String? = null,
         onComplete: () -> Unit
     ) {
         if (title.isBlank()) return
@@ -440,7 +446,7 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
 
         viewModelScope.launch {
             val wasOrWillBeActive = (activePlan.value?.id == planId) || setAsActive
-            repository.saveFullPlan(planId, title.trim(), notes?.ifBlank { null }, setAsActive, snapshotMap)
+            repository.saveFullPlan(planId, title.trim(), notes?.ifBlank { null }, setAsActive, snapshotMap, gradualityConfigJson)
             if (wasOrWillBeActive) {
                 repository.generateShoppingListFromActivePlan(
                     selectedDays = _selectedShoppingDays.value.toList()
@@ -450,6 +456,52 @@ class MealPlanViewModel(application: Application) : AndroidViewModel(application
             // Ricarica i pasti del giorno correntemente visualizzato in Lista Pasti (mantenendo il giorno invariato)
             loadMealsForSelectedDay()
             onComplete()
+        }
+    }
+
+    suspend fun getPlanById(planId: String): MealPlanEntity? {
+        return repository.getPlanById(planId)
+    }
+
+    fun loadGradualityComparisons() {
+        val active = activePlan.value ?: return
+        viewModelScope.launch {
+            _gradualityComparisons.value = repository.getGradualityComparisons(active.id)
+        }
+    }
+
+    fun applyGradualityIncrement(groupKey: String, onComplete: ((Boolean) -> Unit)? = null) {
+        val active = activePlan.value ?: return
+        viewModelScope.launch {
+            val success = repository.applyGradualityStep(active.id, groupKey)
+            if (success) {
+                _userFeedbackMessage.value = "Incremento applicato con successo e lista spesa aggiornata!"
+                loadMealsForSelectedDay()
+                loadGradualityComparisons()
+            }
+            onComplete?.invoke(success)
+        }
+    }
+
+    fun applyAllPendingGradualityIncrements(onComplete: ((Int) -> Unit)? = null) {
+        val active = activePlan.value ?: return
+        viewModelScope.launch {
+            val count = repository.applyAllPendingGradualitySteps(active.id)
+            if (count > 0) {
+                _userFeedbackMessage.value = "$count variazioni graduali applicate e lista spesa aggiornata!"
+                loadMealsForSelectedDay()
+                loadGradualityComparisons()
+            }
+            onComplete?.invoke(count)
+        }
+    }
+
+    fun deleteGradualityConfig(planId: String, onComplete: (() -> Unit)? = null) {
+        viewModelScope.launch {
+            repository.deleteGradualityConfig(planId)
+            loadGradualityComparisons()
+            _userFeedbackMessage.value = "Configurazione gradualità eliminata con successo!"
+            onComplete?.invoke()
         }
     }
 

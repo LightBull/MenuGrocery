@@ -22,8 +22,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import com.example.data.model.GradualityPlanConfig
+import com.example.data.model.GradualityGroupConfig
+import com.example.data.model.GradualityItemComparison
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
@@ -60,6 +67,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -107,6 +115,23 @@ fun ShoppingListScreen(
     val purchasedCount = items.count { it.isPurchased }
     val totalCount = items.size
     val progress = if (totalCount > 0) purchasedCount.toFloat() / totalCount else 0f
+
+    var showGradualityDialog by remember { mutableStateOf(false) }
+
+    val gradualityComparisons by viewModel.gradualityComparisons.collectAsState()
+    LaunchedEffect(activePlan?.id, activePlan?.gradualityConfigJson) {
+        viewModel.loadGradualityComparisons()
+    }
+
+    val gradualityConfig = remember(activePlan?.gradualityConfigJson) {
+        GradualityPlanConfig.fromJsonString(activePlan?.gradualityConfigJson)
+    }
+    val minDaysRemaining = remember(gradualityConfig) {
+        gradualityConfig.minDaysRemaining()
+    }
+    val pendingIncrements = remember(gradualityConfig) {
+        gradualityConfig.getPendingIncrements()
+    }
 
     val unpurchasedItems = remember(items) { items.filter { !it.isPurchased } }
     val purchasedItems = remember(items) { items.filter { it.isPurchased } }
@@ -189,7 +214,52 @@ fun ShoppingListScreen(
                                 )
                             }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                val activeComparisons = gradualityComparisons.filter { !it.isCompleted }
+                                val daysLeft = activeComparisons.minOfOrNull { it.daysRemaining() }
+                                val hasDiscrepancy = activeComparisons.any { !it.isAligned }
+                                if (activeComparisons.isNotEmpty() || (minDaysRemaining != null && pendingIncrements.isNotEmpty())) {
+                                    Surface(
+                                        onClick = { showGradualityDialog = true },
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = Color.White.copy(alpha = 0.22f),
+                                        contentColor = Color.White,
+                                        modifier = Modifier
+                                            .testTag("btn_shopping_graduality")
+                                            .padding(end = 4.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                                contentDescription = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Gradualità" else "Graduality",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Surface(
+                                                shape = CircleShape,
+                                                color = if (hasDiscrepancy || (daysLeft != null && daysLeft <= 0)) TerracottaAccent else SagePrimaryContainer,
+                                                modifier = Modifier.padding(1.dp)
+                                            ) {
+                                                val badgeText = if (hasDiscrepancy) "!" else if (daysLeft != null && daysLeft <= 0) "Oggi" else "-${daysLeft ?: minDaysRemaining ?: 0}"
+                                                Text(
+                                                    text = badgeText,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (hasDiscrepancy || (daysLeft != null && daysLeft <= 0)) Color.White else SagePrimary,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
                                 IconButton(
                                     onClick = { viewModel.resetShoppingList() },
                                     modifier = Modifier.testTag("btn_reset_shopping_list")
@@ -619,6 +689,26 @@ fun ShoppingListScreen(
                     }
                 }
             }
+        }
+
+        // Dialog: Variazione Graduale Pesi Spesa
+        if (showGradualityDialog && (gradualityComparisons.isNotEmpty() || pendingIncrements.isNotEmpty())) {
+            GradualityShoppingDialog(
+                lang = currentLanguage,
+                comparisons = gradualityComparisons,
+                pendingFallback = pendingIncrements,
+                onApplySingle = { item ->
+                    viewModel.applyGradualityIncrement(item.groupConfig.groupKey)
+                },
+                onApplySingleConfig = { config ->
+                    viewModel.applyGradualityIncrement(config.groupKey)
+                },
+                onApplyAll = {
+                    viewModel.applyAllPendingGradualityIncrements()
+                    showGradualityDialog = false
+                },
+                onDismiss = { showGradualityDialog = false }
+            )
         }
 
         // Dialog: Inserimento Extra Manuale
@@ -1239,4 +1329,297 @@ fun ImportShoppingListDialog(
             }
         }
     )
+}
+
+@Composable
+fun GradualityShoppingDialog(
+    lang: com.example.data.model.AppLanguage,
+    comparisons: List<GradualityItemComparison>,
+    pendingFallback: List<GradualityGroupConfig>,
+    onApplySingle: (GradualityItemComparison) -> Unit,
+    onApplySingleConfig: (GradualityGroupConfig) -> Unit,
+    onApplyAll: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                    contentDescription = null,
+                    tint = SagePrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = if (lang == com.example.data.model.AppLanguage.IT) "Variazione Graduale Pesi" else "Graduality Weight Update",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = if (lang == com.example.data.model.AppLanguage.IT)
+                        "Confronto tra i pesi reali attualmente presenti nel piano alimentare e quelli teorici pianificati ad oggi:"
+                    else
+                        "Comparison between actual weights in your meal plan and planned weights scheduled for today:",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (comparisons.isNotEmpty()) {
+                    comparisons.forEach { item ->
+                        val config = item.groupConfig
+                        val days = item.daysRemaining()
+                        val daysText = if (days <= 0) {
+                            if (lang == com.example.data.model.AppLanguage.IT) "Oggi o scaduto" else "Today / Due"
+                        } else {
+                            if (lang == com.example.data.model.AppLanguage.IT) "Tra $days giorni" else "In $days days"
+                        }
+
+                        Card(
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (!item.isAligned)
+                                    MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.25f)
+                                else
+                                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            ),
+                            border = if (!item.isAligned) BorderStroke(1.dp, TerracottaAccent.copy(alpha = 0.5f)) else null,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 5.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = config.foodName,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 15.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+
+                                    if (item.isCompleted) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = SagePrimaryContainer
+                                        ) {
+                                            Text(
+                                                text = if (lang == com.example.data.model.AppLanguage.IT) "Completato" else "Completed",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                color = SagePrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    } else if (!item.isAligned) {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = TerracottaAccent.copy(alpha = 0.2f)
+                                        ) {
+                                            Text(
+                                                text = if (lang == com.example.data.model.AppLanguage.IT) "Da allineare" else "Out of sync",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                color = TerracottaAccent,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    } else {
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = SagePrimaryContainer
+                                        ) {
+                                            Text(
+                                                text = if (lang == com.example.data.model.AppLanguage.IT) "In linea" else "Aligned",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                color = SagePrimary,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                // Riga confronto: Peso reale vs Peso teorico pianificato
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(modifier = Modifier.padding(6.dp)) {
+                                            Text(
+                                                text = if (lang == com.example.data.model.AppLanguage.IT) "Peso reale nel piano" else "Actual meal weight",
+                                                fontSize = 10.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                            Text(
+                                                text = "${item.realCurrentWeight.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)}",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (!item.isAligned) TerracottaAccent else MaterialTheme.colorScheme.onSurface
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = SagePrimaryContainer.copy(alpha = 0.4f),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Column(modifier = Modifier.padding(6.dp)) {
+                                            Text(
+                                                text = if (lang == com.example.data.model.AppLanguage.IT) "Pianificato ad oggi" else "Planned for today",
+                                                fontSize = 10.sp,
+                                                color = SagePrimary
+                                            )
+                                            Text(
+                                                text = "${item.theoreticalWeight.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)}",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = SagePrimary
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "${config.getFormattedTargetMeals(lang)} • ${config.getFormattedTargetDays(lang)}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+
+                                if (!item.isCompleted) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    if (item.nextStep != null) {
+                                        Text(
+                                            text = if (lang == com.example.data.model.AppLanguage.IT)
+                                                "Prossimo step: ${item.nextStep.fromQuantity.toIntIfWhole()} → ${item.nextStep.toQuantity.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)} ($daysText)"
+                                            else
+                                                "Next step: ${item.nextStep.fromQuantity.toIntIfWhole()} → ${item.nextStep.toQuantity.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)} ($daysText)",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (days <= 0) TerracottaAccent else SagePrimary
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    val buttonText = if (!item.isAligned) {
+                                        if (lang == com.example.data.model.AppLanguage.IT)
+                                            "Allinea a ${item.theoreticalWeight.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)}"
+                                        else
+                                            "Align to ${item.theoreticalWeight.toIntIfWhole()} ${config.unit.getLocalizedShortName(lang)}"
+                                    } else {
+                                        val stepTarget = item.nextStep?.toQuantity ?: config.nextQuantity()
+                                        if (lang == com.example.data.model.AppLanguage.IT)
+                                            "Applica incremento (+${config.incrementStep.toIntIfWhole()} → ${stepTarget.toIntIfWhole()})"
+                                        else
+                                            "Apply step (+${config.incrementStep.toIntIfWhole()} → ${stepTarget.toIntIfWhole()})"
+                                    }
+
+                                    FilledTonalButton(
+                                        onClick = { onApplySingle(item) },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                                        modifier = Modifier
+                                            .align(Alignment.End)
+                                            .testTag("btn_apply_single_${config.groupKey}")
+                                    ) {
+                                        Text(
+                                            text = buttonText,
+                                            fontSize = 12.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    pendingFallback.forEach { item ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text(
+                                    text = item.foodName,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = "${item.minQuantity.toIntIfWhole()} → ${item.nextQuantity().toIntIfWhole()} ${item.unit.getLocalizedShortName(lang)}",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = SagePrimary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                FilledTonalButton(
+                                    onClick = { onApplySingleConfig(item) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text(if (lang == com.example.data.model.AppLanguage.IT) "Applica variazione" else "Apply update", fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onApplyAll,
+                colors = ButtonDefaults.buttonColors(containerColor = SagePrimary),
+                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.testTag("btn_apply_all_graduality")
+            ) {
+                Text(
+                    text = if (lang == com.example.data.model.AppLanguage.IT) "Allinea e applica variazioni" else "Align & apply all updates",
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("btn_dismiss_graduality_dialog")
+            ) {
+                Text(if (lang == com.example.data.model.AppLanguage.IT) "Chiudi" else "Close")
+            }
+        }
+    )
+}
+
+private fun Double.toIntIfWhole(): String {
+    return if (this % 1.0 == 0.0) {
+        this.toInt().toString()
+    } else {
+        String.format(java.util.Locale.getDefault(), "%.1f", this)
+    }
 }

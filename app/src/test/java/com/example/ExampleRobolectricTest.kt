@@ -12,6 +12,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
@@ -21,6 +22,13 @@ import java.util.UUID
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [36])
 class ExampleRobolectricTest {
+
+    @Before
+    fun setUp() = runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        db.clearAllTables()
+    }
 
     @Test
     fun `read string from context`() {
@@ -165,6 +173,251 @@ class ExampleRobolectricTest {
         assertNotNull(results)
         assertTrue("La ricerca in inglese di 'spelt' deve restituire alimenti", results.isNotEmpty())
         assertTrue("Deve provenire da FoodDb", results.any { it.source == "FoodDb" })
+    }
+
+    @Test
+    fun `test Graduality Serialization and Deserialization`() {
+        val group = com.example.data.model.GradualityGroupConfig(
+            groupKey = "pane|80.0|GRAMS",
+            foodName = "Pane",
+            baseQuantity = 80.0,
+            unit = QuantityUnit.GRAMS,
+            category = "GRAINS_PASTA",
+            targetMealTypes = listOf(MealType.LUNCH, MealType.DINNER),
+            targetDays = listOf(1, 2, 3),
+            isEnabled = true,
+            minQuantity = 80.0,
+            maxQuantity = 120.0,
+            incrementStep = 10.0,
+            cadenceDays = 7,
+            startDateMillis = 1700000000000L,
+            nextStepDateMillis = 1700604800000L,
+            currentAppliedQuantity = 90.0
+        )
+
+        val planConfig = com.example.data.model.GradualityPlanConfig(
+            items = listOf(group),
+            globalStartDateMillis = 1700000000000L,
+            globalCadenceDays = 7
+        )
+        val jsonStr = planConfig.toJsonString()
+
+        val parsed = com.example.data.model.GradualityPlanConfig.fromJsonString(jsonStr)
+        assertEquals(1, parsed.items.size)
+        assertEquals(1700000000000L, parsed.globalStartDateMillis)
+        assertEquals(7, parsed.globalCadenceDays)
+        assertTrue(parsed.hasActiveGraduality())
+        val parsedItem = parsed.items[0]
+        assertEquals("pane|80.0|GRAMS", parsedItem.groupKey)
+        assertEquals("Pane", parsedItem.foodName)
+        assertEquals(80.0, parsedItem.baseQuantity, 0.001)
+        assertEquals(90.0, parsedItem.currentAppliedQuantity, 0.001)
+        assertEquals(120.0, parsedItem.maxQuantity, 0.001)
+        assertEquals(10.0, parsedItem.incrementStep, 0.001)
+        assertEquals(7, parsedItem.cadenceDays)
+        assertEquals(true, parsedItem.isEnabled)
+        assertEquals(listOf(MealType.LUNCH, MealType.DINNER), parsedItem.targetMealTypes)
+        assertEquals(listOf(1, 2, 3), parsedItem.targetDays)
+    }
+
+    @Test
+    fun `test Graduality Days Remaining Countdown`() {
+        val now = 1700000000000L
+        val sixDaysLater = now + 6 * 86_400_000L
+        val group = com.example.data.model.GradualityGroupConfig(
+            groupKey = "pane|80.0|GRAMS",
+            foodName = "Pane",
+            baseQuantity = 80.0,
+            unit = QuantityUnit.GRAMS,
+            category = "GRAINS_PASTA",
+            targetMealTypes = listOf(MealType.LUNCH),
+            targetDays = listOf(1),
+            isEnabled = true,
+            maxQuantity = 100.0,
+            nextStepDateMillis = sixDaysLater
+        )
+
+        assertEquals(6, group.daysRemaining(fromMillis = now))
+
+        val config = com.example.data.model.GradualityPlanConfig(listOf(group))
+        assertEquals(6, config.minDaysRemaining(fromMillis = now))
+    }
+
+    @Test
+    fun `saveFullPlan persists graduality config and is restored properly`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val repository = MealPlanRepository(db, context)
+
+        val planId = UUID.randomUUID().toString()
+        val group = com.example.data.model.GradualityGroupConfig(
+            groupKey = "riso|100.0|GRAMS",
+            foodName = "Riso",
+            baseQuantity = 100.0,
+            unit = QuantityUnit.GRAMS,
+            category = "GRAINS_PASTA",
+            targetMealTypes = listOf(MealType.LUNCH),
+            targetDays = listOf(1, 2),
+            isEnabled = true,
+            minQuantity = 100.0,
+            maxQuantity = 150.0,
+            incrementStep = 10.0,
+            currentAppliedQuantity = 100.0
+        )
+        val gradConfig = com.example.data.model.GradualityPlanConfig(
+            items = listOf(group),
+            globalStartDateMillis = 1700000000000L,
+            globalCadenceDays = 7
+        )
+
+        repository.saveFullPlan(
+            planId = planId,
+            title = "Piano Test Gradualita",
+            notes = null,
+            setAsActive = false,
+            daysMeals = emptyMap(),
+            gradualityConfigJson = gradConfig.toJsonString()
+        )
+
+        val retrieved = repository.getPlanById(planId)
+        assertNotNull(retrieved)
+        assertNotNull(retrieved?.gradualityConfigJson)
+
+        val parsed = com.example.data.model.GradualityPlanConfig.fromJsonString(retrieved?.gradualityConfigJson)
+        assertEquals(1, parsed.items.size)
+        assertEquals("riso|100.0|GRAMS", parsed.items[0].groupKey)
+        assertTrue(parsed.items[0].isEnabled)
+        assertEquals(100.0, parsed.items[0].minQuantity, 0.001)
+        assertEquals(150.0, parsed.items[0].maxQuantity, 0.001)
+        assertEquals(1700000000000L, parsed.globalStartDateMillis)
+        assertEquals(7, parsed.globalCadenceDays)
+    }
+
+    @Test
+    fun `deleteGradualityConfig completely wipes graduality from plan`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val repository = MealPlanRepository(db, context)
+
+        val planId = UUID.randomUUID().toString()
+        val gradConfig = com.example.data.model.GradualityPlanConfig(
+            items = listOf(
+                com.example.data.model.GradualityGroupConfig(
+                    groupKey = "pasta|GRAMS",
+                    foodName = "Pasta",
+                    unit = QuantityUnit.GRAMS,
+                    category = "GRAINS_PASTA",
+                    targetMealTypes = listOf(MealType.LUNCH),
+                    targetDays = listOf(1),
+                    isEnabled = true,
+                    minQuantity = 80.0,
+                    maxQuantity = 120.0,
+                    incrementStep = 10.0
+                )
+            )
+        )
+
+        repository.saveFullPlan(
+            planId = planId,
+            title = "Piano Con Gradualita",
+            notes = null,
+            setAsActive = false,
+            daysMeals = emptyMap(),
+            gradualityConfigJson = gradConfig.toJsonString()
+        )
+
+        val withGrad = repository.getPlanById(planId)
+        assertNotNull(withGrad?.gradualityConfigJson)
+
+        repository.deleteGradualityConfig(planId)
+
+        val afterDelete = repository.getPlanById(planId)
+        assertNotNull(afterDelete)
+        assertEquals(null, afterDelete?.gradualityConfigJson)
+    }
+
+    @Test
+    fun `applyGradualityStep aligns food weight when retrodated or modified manually`() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val db = MealPlanDatabase.getDatabase(context)
+        val repository = MealPlanRepository(db, context)
+
+        val planId = UUID.randomUUID().toString()
+        val mealId = UUID.randomUUID().toString()
+
+        // Crea pasto e alimento a 100g nel piano
+        val foodItem = FoodItemModel(
+            id = UUID.randomUUID().toString(),
+            mealId = mealId,
+            name = "Riso Integrale",
+            brand = "Gallo",
+            quantity = 100.0,
+            unit = QuantityUnit.GRAMS,
+            toDefrost = false,
+            calories = 350.0,
+            protein = 7.0,
+            carbs = 77.0,
+            fat = 2.0
+        )
+        val mealWithItems = com.example.data.model.MealWithItems(
+            mealType = MealType.LUNCH,
+            dayOfWeek = 1,
+            mealId = mealId,
+            items = listOf(foodItem)
+        )
+
+        val now = System.currentTimeMillis()
+        // Data di inizio piano retrodatata di 28 giorni (due cicli da 14 giorni trascorsi: 100 -> 110 -> 120)
+        val startDateRetrodated = now - (28 * 86_400_000L)
+        val gradGroup = com.example.data.model.GradualityGroupConfig(
+            groupKey = "riso integrale|GRAMS",
+            foodName = "Riso Integrale",
+            unit = QuantityUnit.GRAMS,
+            category = "GRAINS_PASTA",
+            targetMealTypes = listOf(MealType.LUNCH),
+            targetDays = listOf(1),
+            isEnabled = true,
+            minQuantity = 100.0,
+            maxQuantity = 140.0,
+            incrementStep = 10.0,
+            cadenceDays = 14,
+            startDateMillis = startDateRetrodated
+        )
+        val gradConfig = com.example.data.model.GradualityPlanConfig(
+            items = listOf(gradGroup),
+            globalStartDateMillis = startDateRetrodated,
+            globalCadenceDays = 14
+        )
+
+        repository.saveFullPlan(
+            planId = planId,
+            title = "Piano Retrodatato",
+            notes = null,
+            setAsActive = true,
+            daysMeals = mapOf(1 to listOf(mealWithItems)),
+            gradualityConfigJson = gradConfig.toJsonString()
+        )
+
+        // Verifica confronto iniziale: peso reale = 100, teorico = 120
+        val comparisons = repository.getGradualityComparisons(planId)
+        assertEquals(1, comparisons.size)
+        val comp = comparisons[0]
+        assertEquals(100.0, comp.realCurrentWeight, 0.001)
+        assertEquals(120.0, comp.theoreticalWeight, 0.001)
+        assertFalse("Deve rilevare la discrepanza tra reale e teorico", comp.isAligned)
+
+        // Applica l'allineamento
+        val success = repository.applyGradualityStep(planId, gradGroup.groupKey)
+        assertTrue(success)
+
+        // Verifica che il pasto nel piano sia stato allineato a 120g
+        val updatedMeals = repository.getMealsWithItemsForDay(planId, 1)
+        val updatedFood = updatedMeals.first { it.mealType == MealType.LUNCH }.items.first { it.name == "Riso Integrale" }
+        assertEquals(120.0, updatedFood.quantity, 0.001)
+
+        // Nuovo confronto: ora è allineato!
+        val comparisonsAfter = repository.getGradualityComparisons(planId)
+        assertTrue("Dopo l'allineamento il piano deve risultare in linea", comparisonsAfter[0].isAligned)
     }
 }
 

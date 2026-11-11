@@ -15,7 +15,7 @@ import androidx.room.TypeConverters
         AppSettingEntity::class,
         FoodEmbeddingEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(MealPlanConverters::class)
@@ -28,7 +28,7 @@ abstract class MealPlanDatabase : RoomDatabase() {
     abstract fun foodEmbeddingDao(): FoodEmbeddingDao
 
     companion object {
-        const val DATABASE_VERSION = 4
+        const val DATABASE_VERSION = 5
         const val DATABASE_NAME = "mealplan_database"
 
         @Volatile

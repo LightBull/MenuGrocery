@@ -13,6 +13,9 @@ import com.example.data.model.MealType
 import com.example.data.model.MealWithItems
 import com.example.data.model.NutritionalSummary
 import com.example.data.model.QuantityUnit
+import com.example.data.model.GradualityPlanConfig
+import com.example.data.model.GradualityGroupConfig
+import com.example.data.model.GradualityItemComparison
 import com.example.data.model.FoodCategory
 import com.example.data.model.AppLanguage
 import com.example.data.local.fooddb.FoodDatabase
@@ -733,7 +736,8 @@ class MealPlanRepository(
         title: String,
         notes: String?,
         setAsActive: Boolean,
-        daysMeals: Map<Int, List<MealWithItems>>
+        daysMeals: Map<Int, List<MealWithItems>>,
+        gradualityConfigJson: String? = null
     ) = withContext(Dispatchers.IO) {
         database.withTransaction {
             val existingPlan = mealPlanDao.getPlanById(planId)
@@ -741,7 +745,8 @@ class MealPlanRepository(
                 existingPlan.copy(
                     title = title,
                     notes = notes,
-                    isActive = if (setAsActive) true else existingPlan.isActive
+                    isActive = if (setAsActive) true else existingPlan.isActive,
+                    gradualityConfigJson = gradualityConfigJson
                 )
             } else {
                 MealPlanEntity(
@@ -749,7 +754,8 @@ class MealPlanRepository(
                     title = title,
                     isActive = setAsActive,
                     createdAt = System.currentTimeMillis(),
-                    notes = notes
+                    notes = notes,
+                    gradualityConfigJson = gradualityConfigJson
                 )
             }
 
@@ -853,7 +859,8 @@ class MealPlanRepository(
             title = newTitle,
             isActive = false,
             createdAt = System.currentTimeMillis(),
-            notes = sourcePlan.notes
+            notes = sourcePlan.notes,
+            gradualityConfigJson = sourcePlan.gradualityConfigJson
         )
         mealPlanDao.insertPlan(duplicatedPlan)
 
@@ -879,6 +886,142 @@ class MealPlanRepository(
             mealFoodItemDao.insertItems(newItems)
         }
         newPlanId
+    }
+
+    suspend fun getPlanById(planId: String): MealPlanEntity? = withContext(Dispatchers.IO) {
+        mealPlanDao.getPlanById(planId)
+    }
+
+    suspend fun updateGradualityConfig(planId: String, configJson: String?) = withContext(Dispatchers.IO) {
+        mealPlanDao.updateGradualityConfig(planId, configJson)
+    }
+
+    suspend fun deleteGradualityConfig(planId: String) = withContext(Dispatchers.IO) {
+        mealPlanDao.updateGradualityConfig(planId, null)
+    }
+
+    suspend fun getGradualityComparisons(planId: String): List<GradualityItemComparison> = withContext(Dispatchers.IO) {
+        val plan = mealPlanDao.getPlanById(planId) ?: return@withContext emptyList()
+        val config = GradualityPlanConfig.fromJsonString(plan.gradualityConfigJson)
+        if (!config.hasActiveGraduality()) return@withContext emptyList()
+
+        val planMeals = mealDao.getMealsForPlanSync(planId)
+        val allMealIds = planMeals.map { it.id }
+        val allItems = if (allMealIds.isNotEmpty()) mealFoodItemDao.getItemsForMealsSync(allMealIds) else emptyList()
+
+        val now = System.currentTimeMillis()
+        config.items.filter { it.isEnabled }.map { group ->
+            val targetMeals = planMeals.filter { meal ->
+                meal.dayOfWeek in group.targetDays && meal.mealType in group.targetMealTypes
+            }
+            val targetMealIds = targetMeals.map { it.id }
+            val matchingItems = allItems.filter { item ->
+                item.mealId in targetMealIds &&
+                item.name.equals(group.foodName, ignoreCase = true) &&
+                item.unit == group.unit
+            }
+
+            val realWeight = matchingItems.firstOrNull()?.quantity ?: group.minQuantity
+            val theoretical = group.calculateTheoreticalWeight(now)
+            val nextStep = group.nextScheduledStep(now)
+
+            GradualityItemComparison(
+                groupConfig = group,
+                realCurrentWeight = realWeight,
+                theoreticalWeight = theoretical,
+                nextStep = nextStep
+            )
+        }
+    }
+
+    suspend fun applyGradualityTargetWeight(planId: String, groupKey: String, newQuantity: Double): Boolean = withContext(Dispatchers.IO) {
+        val plan = mealPlanDao.getPlanById(planId) ?: return@withContext false
+        val config = GradualityPlanConfig.fromJsonString(plan.gradualityConfigJson)
+        val group = config.items.find { it.groupKey == groupKey } ?: return@withContext false
+
+        database.withTransaction {
+            val planMeals = mealDao.getMealsForPlanSync(planId)
+            val targetMeals = planMeals.filter { meal ->
+                meal.dayOfWeek in group.targetDays && meal.mealType in group.targetMealTypes
+            }
+            val targetMealIds = targetMeals.map { it.id }
+            if (targetMealIds.isNotEmpty()) {
+                val items = mealFoodItemDao.getItemsForMealsSync(targetMealIds)
+                for (item in items) {
+                    if (item.name.equals(group.foodName, ignoreCase = true) && item.unit == group.unit) {
+                        mealFoodItemDao.updateQuantity(item.id, newQuantity)
+                    }
+                }
+            }
+
+            val updatedGroup = group.copy(
+                currentAppliedQuantity = newQuantity,
+                nextStepDateMillis = System.currentTimeMillis() + group.cadenceDays * 86_400_000L
+            )
+            val updatedItems = config.items.map { if (it.groupKey == groupKey) updatedGroup else it }
+            val updatedConfig = GradualityPlanConfig(
+                items = updatedItems,
+                globalStartDateMillis = config.globalStartDateMillis,
+                globalCadenceDays = config.globalCadenceDays
+            )
+            mealPlanDao.updateGradualityConfig(planId, updatedConfig.toJsonString())
+        }
+
+        if (plan.isActive) {
+            generateShoppingListFromActivePlan(
+                selectedDays = listOf(1, 2, 3, 4, 5, 6, 7),
+                preserveManualExtras = true
+            )
+            DefrostScheduler.resyncAllActiveDefrostReminders(context, database)
+        }
+        true
+    }
+
+    suspend fun applyGradualityStep(planId: String, groupKey: String): Boolean = withContext(Dispatchers.IO) {
+        val plan = mealPlanDao.getPlanById(planId) ?: return@withContext false
+        val config = GradualityPlanConfig.fromJsonString(plan.gradualityConfigJson)
+        val group = config.items.find { it.groupKey == groupKey } ?: return@withContext false
+        if (!group.isEnabled) return@withContext false
+
+        val planMeals = mealDao.getMealsForPlanSync(planId)
+        val targetMeals = planMeals.filter { meal ->
+            meal.dayOfWeek in group.targetDays && meal.mealType in group.targetMealTypes
+        }
+        val targetMealIds = targetMeals.map { it.id }
+        val items = if (targetMealIds.isNotEmpty()) mealFoodItemDao.getItemsForMealsSync(targetMealIds) else emptyList()
+        val matchingItem = items.firstOrNull { it.name.equals(group.foodName, ignoreCase = true) && itemMatches(it.unit, group.unit) }
+        val currentRealWeight = matchingItem?.quantity ?: group.minQuantity
+
+        val now = System.currentTimeMillis()
+        val theoretical = group.calculateTheoreticalWeight(now)
+
+        val nextQty = if (currentRealWeight != theoretical) {
+            theoretical
+        } else {
+            val step = group.nextScheduledStep(now)
+            step?.toQuantity ?: group.nextQuantity()
+        }
+
+        if (currentRealWeight == nextQty && group.isMaxReached(currentRealWeight)) {
+            return@withContext false
+        }
+
+        applyGradualityTargetWeight(planId, groupKey, nextQty)
+    }
+
+    private fun itemMatches(u1: QuantityUnit, u2: QuantityUnit): Boolean = u1 == u2
+
+    suspend fun applyAllPendingGradualitySteps(planId: String): Int = withContext(Dispatchers.IO) {
+        val plan = mealPlanDao.getPlanById(planId) ?: return@withContext 0
+        val comparisons = getGradualityComparisons(planId)
+        val toUpdate = comparisons.filter { !it.isCompleted && (!it.isAligned || it.nextStep != null) }
+        var count = 0
+        for (item in toUpdate) {
+            if (applyGradualityStep(planId, item.groupConfig.groupKey)) {
+                count++
+            }
+        }
+        count
     }
 
     // --- Inizializzazione Dati Dimostrativi ---
