@@ -16,6 +16,21 @@ object AppReleaseNotesProvider {
 
     val RELEASES: List<ReleaseInfo> = listOf(
         ReleaseInfo(
+            versionCode = 15,
+            versionName = "15.0",
+            releaseDate = "Novembre 2026",
+            highlightsIt = listOf(
+                "Barra di selezione dei giorni bloccata in alto durante lo scorrimento in Modifica Piano",
+                "Barra di selezione dei giorni bloccata in alto durante lo scorrimento nella Lista Pasti",
+                "Scorrimento fluido delle schede del piano, delle azioni giornaliere e del riepilogo calorie"
+            ),
+            highlightsEn = listOf(
+                "Sticky day selector bar locked at the top while scrolling in Plan Editor",
+                "Sticky day selector bar locked at the top while scrolling in Meal List",
+                "Smooth scrolling for plan details, daily actions, and calorie summary cards"
+            )
+        ),
+        ReleaseInfo(
             versionCode = 14,
             versionName = "14.0",
             releaseDate = "Novembre 2026",

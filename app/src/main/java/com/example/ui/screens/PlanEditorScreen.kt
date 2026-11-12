@@ -3,6 +3,7 @@ package com.example.ui.screens
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -78,6 +79,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableDoubleStateOf
 import androidx.compose.runtime.mutableFloatStateOf
@@ -113,7 +115,7 @@ import com.example.ui.components.CategorySelectorDropdown
 import com.example.ui.components.CopyDayDialog
 import com.example.ui.components.CopyFoodItemDialog
 import com.example.ui.components.CopyMealDialog
-import com.example.ui.components.DaySelectorRow
+import com.example.ui.components.StickyDaySelectorBar
 import com.example.ui.components.DefrostBadge
 import com.example.ui.components.FoodSourceDot
 import com.example.ui.theme.CartaDaZucchero
@@ -124,7 +126,7 @@ import com.example.ui.theme.TerracottaAccent
 import com.example.ui.viewmodel.MealPlanViewModel
 import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PlanEditorScreen(
     planId: String?, // null se nuovo piano
@@ -142,6 +144,10 @@ fun PlanEditorScreen(
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
+    var stickyHeaderHeightPx by remember { mutableIntStateOf(0) }
+    val isDaysBarPinned by remember {
+        derivedStateOf { listState.firstVisibleItemIndex >= 1 }
+    }
 
     val pendingNavigationTab by viewModel.pendingNavigationTab.collectAsState()
     val currentLanguage by viewModel.currentLanguage.collectAsState()
@@ -600,77 +606,80 @@ fun PlanEditorScreen(
                 }
             }
 
-            // Barra a schede per giorno della settimana (Lunedì...Domenica)
-            item {
-                Column {
-                    DaySelectorRow(
-                        selectedDay = selectedDay,
-                        onDaySelected = {
-                            selectedDay = it
-                            inlineAddMealType = null // Chiudi eventuale form inline
-                            activeMealType = null // Reset pasto attivo per il nuovo giorno
-                        },
-                        lang = currentLanguage
+            // Barra a schede per giorno della settimana bloccata in alto durante lo scorrimento
+            stickyHeader(key = "sticky_days_header") {
+                StickyDaySelectorBar(
+                    selectedDay = selectedDay,
+                    onDaySelected = {
+                        selectedDay = it
+                        inlineAddMealType = null // Chiudi eventuale form inline
+                        activeMealType = null // Reset pasto attivo per il nuovo giorno
+                    },
+                    isPinned = isDaysBarPinned,
+                    lang = currentLanguage,
+                    onHeightMeasured = { stickyHeaderHeightPx = it }
+                )
+            }
+
+            // Riga azioni giorno (scorre insieme ai pasti)
+            item(key = "day_actions_row") {
+                val currentDayInfo = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }
+                val currentDayMeals = daysMealsMap[selectedDay] ?: emptyList()
+                val totalFoodsInDay = currentDayMeals.sumOf { it.items.size }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val dayFullName = currentDayInfo?.getLocalizedFullName(currentLanguage) ?: "Giorno"
+                    val foodsLabel = if (currentLanguage == com.example.data.model.AppLanguage.IT) "alimenti" else "foods"
+                    Text(
+                        text = "$dayFullName • $totalFoodsInDay $foodsLabel",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
 
-                    val currentDayInfo = DayOfWeekInfo.ALL_DAYS.firstOrNull { it.dayIndex == selectedDay }
-                    val currentDayMeals = daysMealsMap[selectedDay] ?: emptyList()
-                    val totalFoodsInDay = currentDayMeals.sumOf { it.items.size }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        OutlinedButton(
+                            onClick = { showGradualityScreen = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("btn_manage_graduality")
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                                contentDescription = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Gestione gradualità" else "Graduality management",
+                                tint = SagePrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        val dayFullName = currentDayInfo?.getLocalizedFullName(currentLanguage) ?: "Giorno"
-                        val foodsLabel = if (currentLanguage == com.example.data.model.AppLanguage.IT) "alimenti" else "foods"
-                        Text(
-                            text = "$dayFullName • $totalFoodsInDay $foodsLabel",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Spacer(modifier = Modifier.width(6.dp))
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedButton(
-                                onClick = { showGradualityScreen = true },
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.testTag("btn_manage_graduality")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                                    contentDescription = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Gestione gradualità" else "Graduality management",
-                                    tint = SagePrimary,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                            }
-
+                        OutlinedButton(
+                            onClick = { showCopyDayDialog = true },
+                            enabled = totalFoodsInDay > 0,
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.testTag("btn_copy_entire_day")
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.ContentCopy,
+                                contentDescription = null,
+                                modifier = Modifier.size(15.dp),
+                                tint = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-
-                            OutlinedButton(
-                                onClick = { showCopyDayDialog = true },
-                                enabled = totalFoodsInDay > 0,
-                                shape = RoundedCornerShape(10.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                                modifier = Modifier.testTag("btn_copy_entire_day")
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.ContentCopy,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp),
-                                    tint = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-                                )
-                            }
+                            Text(
+                                text = if (currentLanguage == com.example.data.model.AppLanguage.IT) "Copia Giorno" else "Copy Day",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (totalFoodsInDay > 0) SagePrimary else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
                         }
                     }
                 }
@@ -754,7 +763,10 @@ fun PlanEditorScreen(
                                             val mealIdx = currentDayMeals.indexOfFirst { it.mealType == mealWithItems.mealType }
                                             if (mealIdx >= 0) {
                                                 coroutineScope.launch {
-                                                    listState.animateScrollToItem(index = 2 + mealIdx)
+                                                    listState.animateScrollToItem(
+                                                        index = 3 + mealIdx,
+                                                        scrollOffset = if (stickyHeaderHeightPx > 0) -stickyHeaderHeightPx else 0
+                                                    )
                                                 }
                                             }
                                         }
@@ -861,7 +873,10 @@ fun PlanEditorScreen(
                                         if (mealIdx >= 0) {
                                             coroutineScope.launch {
                                                 delay(80)
-                                                listState.animateScrollToItem(index = 2 + mealIdx)
+                                                listState.animateScrollToItem(
+                                                    index = 3 + mealIdx,
+                                                    scrollOffset = if (stickyHeaderHeightPx > 0) -stickyHeaderHeightPx else 0
+                                                )
                                             }
                                         }
                                     },
@@ -875,7 +890,10 @@ fun PlanEditorScreen(
                                         if (mealIdx >= 0) {
                                             coroutineScope.launch {
                                                 delay(80)
-                                                listState.animateScrollToItem(index = 2 + mealIdx)
+                                                listState.animateScrollToItem(
+                                                    index = 3 + mealIdx,
+                                                    scrollOffset = if (stickyHeaderHeightPx > 0) -stickyHeaderHeightPx else 0
+                                                )
                                             }
                                         }
                                     }

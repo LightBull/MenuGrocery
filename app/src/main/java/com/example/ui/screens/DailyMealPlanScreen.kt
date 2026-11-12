@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -32,8 +33,10 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,7 +54,7 @@ import com.example.data.model.FoodItemModel
 import com.example.data.model.MealWithItems
 import com.example.data.model.QuantityUnit
 import com.example.ui.components.DailyNutritionalCard
-import com.example.ui.components.DaySelectorRow
+import com.example.ui.components.StickyDaySelectorBar
 import com.example.ui.components.DefrostBadge
 import com.example.ui.theme.CartaDaZucchero
 import com.example.ui.theme.SagePrimary
@@ -70,6 +73,7 @@ import kotlin.math.abs
  * Supporta la navigazione tra i giorni con swipe orizzontale a destra e sinistra.
  * Scorre automaticamente al prossimo pasto da consumare se a 2 ore o meno di distanza dall'orario consigliato.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DailyMealPlanScreen(
     viewModel: MealPlanViewModel,
@@ -85,6 +89,10 @@ fun DailyMealPlanScreen(
 
     val listState = rememberLazyListState()
     var totalDragX by remember { mutableFloatStateOf(0f) }
+    var stickyHeaderHeightPx by remember { mutableIntStateOf(0) }
+    val isDaysBarPinned by remember {
+        derivedStateOf { listState.firstVisibleItemIndex >= 1 }
+    }
 
     // Auto-scroll al prossimo pasto da consumare se entro 2 ore (<= 120 minuti) dall'orario tipico
     LaunchedEffect(mealsForDay) {
@@ -109,7 +117,10 @@ fun DailyMealPlanScreen(
             if (closestMealIndex != -1) {
                 // Indice del pasto nella LazyColumn (3 header items + closestMealIndex)
                 val targetIndex = 3 + closestMealIndex
-                listState.animateScrollToItem(targetIndex)
+                listState.animateScrollToItem(
+                    index = targetIndex,
+                    scrollOffset = if (stickyHeaderHeightPx > 0) -stickyHeaderHeightPx else 0
+                )
             }
         }
     }
@@ -210,12 +221,14 @@ fun DailyMealPlanScreen(
             }
         }
 
-        // Barra di selezione giorni della settimana (Lunedì - Domenica)
-        item {
-            DaySelectorRow(
+        // Barra di selezione giorni della settimana bloccata in alto durante lo scorrimento
+        stickyHeader(key = "sticky_days_header") {
+            StickyDaySelectorBar(
                 selectedDay = selectedDay,
                 onDaySelected = { viewModel.selectDay(it) },
-                lang = currentLanguage
+                isPinned = isDaysBarPinned,
+                lang = currentLanguage,
+                onHeightMeasured = { stickyHeaderHeightPx = it }
             )
         }
 

@@ -38,6 +38,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -54,6 +55,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -118,6 +120,43 @@ fun DaySelectorRow(
                         color = if (isSelected) Color.White.copy(alpha = 0.85f) else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+fun StickyDaySelectorBar(
+    selectedDay: Int,
+    onDaySelected: (Int) -> Unit,
+    isPinned: Boolean = false,
+    lang: com.example.data.model.AppLanguage = com.example.data.model.AppLanguage.IT,
+    onHeightMeasured: ((Int) -> Unit)? = null,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (onHeightMeasured != null) {
+                    Modifier.onSizeChanged { size -> onHeightMeasured(size.height) }
+                } else Modifier
+            )
+            .testTag("sticky_day_selector_bar"),
+        color = MaterialTheme.colorScheme.background,
+        tonalElevation = if (isPinned) 2.dp else 0.dp,
+        shadowElevation = if (isPinned) 4.dp else 0.dp
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            DaySelectorRow(
+                selectedDay = selectedDay,
+                onDaySelected = onDaySelected,
+                lang = lang
+            )
+            if (isPinned) {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                )
             }
         }
     }
